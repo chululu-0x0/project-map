@@ -1544,3 +1544,162 @@ strong {
   }
 
 }
+
+/* ========================================
+   タスク接続線
+   シンプル縦型ステッパー
+======================================== */
+
+
+/* タスク部分を中央に配置 */
+.task-branch {
+  width: 170px;
+}
+
+
+/* ----------------------------------------
+   マイルストーン → 最初のタスク
+---------------------------------------- */
+
+.task-branch::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 50%;
+
+  width: 4px;
+  height: 20px;
+
+  transform: translateX(-50%);
+
+  border-radius: 999px;
+
+  background: var(--gray-line);
+}
+
+
+/* 前回作った横方向の枝を削除 */
+.task-branch::after {
+  display: none;
+}
+
+
+/* ----------------------------------------
+   タスクリスト
+---------------------------------------- */
+
+.task-list {
+  position: relative;
+
+  padding-left: 0;
+
+  gap: 18px;
+}
+
+
+/* 前回作った左側の縦幹を削除 */
+.task-list::before {
+  display: none;
+}
+
+
+/* ----------------------------------------
+   各タスク
+---------------------------------------- */
+
+.task {
+  position: relative;
+
+  z-index: 1;
+}
+
+
+/* 前回の横枝を削除 */
+.task::before {
+  display: none;
+}
+
+
+/* ----------------------------------------
+   タスク → 次のタスク
+   カード中央からまっすぐ下へ
+---------------------------------------- */
+
+.task::after {
+  content: "";
+
+  position: absolute;
+
+  top: 100%;
+  left: 50%;
+
+  width: 2px;
+  height: 18px;
+
+  transform: translateX(-50%);
+
+  background: var(--gray-line);
+
+  z-index: -1;
+}
+
+
+/* 最後のタスクからは線を出さない */
+.task:last-child::after {
+  display: none;
+}
+
+
+/* ========================================
+   状態ごとの進行線
+======================================== */
+
+
+/* 完了済み */
+.task-complete::after {
+  width: 4px;
+
+  background: var(--pink);
+}
+
+
+/* 今やっている */
+.task-current::after {
+  width: 3px;
+
+  background: var(--mint);
+}
+
+
+/* 次にやる */
+.task-next::after {
+  width: 2px;
+
+  background: var(--yellow);
+}
+
+
+/* ========================================
+   現在のマイルストーンから
+   タスクへ向かう線
+======================================== */
+
+.milestone-complete .task-branch::before,
+.milestone-current .task-branch::before {
+  background: var(--pink);
+}
+
+
+/* ========================================
+   iPhone
+======================================== */
+
+@media (max-width: 520px) {
+
+  .task-branch {
+    width: 150px;
+  }
+
+}
