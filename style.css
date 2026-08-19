@@ -1229,3 +1229,143 @@ strong {
   }
 
 }
+
+/* ========================================
+   マイルストーン
+   展開 / 折りたたみアニメーション
+======================================== */
+
+.task-branch {
+  max-height: 0;
+
+  margin-top: 0;
+  padding-top: 0;
+
+  opacity: 0;
+
+  transform:
+    translateY(-8px);
+
+  overflow: hidden;
+
+  pointer-events: none;
+
+  transition:
+    max-height 0.3s ease,
+    margin-top 0.3s ease,
+    padding-top 0.3s ease,
+    opacity 0.22s ease,
+    transform 0.3s ease;
+}
+
+
+/* 展開状態 */
+.task-branch.is-open {
+  max-height: 900px;
+
+  margin-top: 24px;
+  padding-top: 20px;
+
+  opacity: 1;
+
+  transform:
+    translateY(0);
+
+  overflow: visible;
+
+  pointer-events: auto;
+}
+
+
+/* ========================================
+   展開マーク
+======================================== */
+
+.milestone-button::after {
+  content: "⌄";
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 22px;
+  height: 22px;
+
+  margin-top: 8px;
+
+  border-radius: 50%;
+
+  color: var(--text-soft);
+
+  font-size: 15px;
+  line-height: 1;
+
+  transition:
+    transform 0.25s ease,
+    color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+
+/* 開いているとき */
+.milestone-button[aria-expanded="true"]::after {
+  transform:
+    rotate(180deg);
+
+  color:
+    var(--pink-dark);
+
+  background:
+    var(--pink-light);
+}
+
+
+/* ========================================
+   タスクを少し遅れて出す
+======================================== */
+
+.task-branch .task {
+  opacity: 0;
+
+  transform:
+    translateY(-5px);
+
+  transition:
+    opacity 0.22s ease,
+    transform 0.25s ease;
+}
+
+
+/* 開いたとき */
+.task-branch.is-open .task {
+  opacity: 1;
+
+  transform:
+    translateY(0);
+}
+
+
+/* 少しだけ順番に出す */
+.task-branch.is-open .task:nth-child(1) {
+  transition-delay: 0.03s;
+}
+
+.task-branch.is-open .task:nth-child(2) {
+  transition-delay: 0.06s;
+}
+
+.task-branch.is-open .task:nth-child(3) {
+  transition-delay: 0.09s;
+}
+
+.task-branch.is-open .task:nth-child(4) {
+  transition-delay: 0.12s;
+}
+
+.task-branch.is-open .task:nth-child(5) {
+  transition-delay: 0.15s;
+}
+
+.task-branch.is-open .task:nth-child(6) {
+  transition-delay: 0.18s;
+}
