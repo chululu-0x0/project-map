@@ -1,0 +1,1231 @@
+/* ========================================
+   Project Map
+   基本スタイル
+======================================== */
+
+:root {
+  /* ベース */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --text: #4a4852;
+  --text-soft: #8f8b99;
+
+  /* 境界線・未着手 */
+  --gray: #d9d8e1;
+  --gray-light: #f6f6f8;
+  --gray-line: #dedde5;
+
+  /* 完了・進行済み */
+  --pink: #f29ab2;
+  --pink-dark: #e97f9d;
+  --pink-light: #fff1f5;
+
+  /* 今やっている */
+  --mint: #a9ded2;
+  --mint-dark: #75bfae;
+  --mint-light: #effaf7;
+
+  /* 次にやる */
+  --yellow: #f6dea0;
+  --yellow-dark: #c7a34b;
+  --yellow-light: #fff8e8;
+
+  /* 補助 */
+  --lavender: #cfc8ea;
+  --lavender-light: #f5f2fc;
+
+  /* 共通 */
+  --radius-small: 12px;
+  --radius-medium: 18px;
+  --radius-large: 24px;
+
+  --shadow-soft:
+    0 8px 24px rgba(74, 72, 82, 0.07);
+}
+
+
+/* ========================================
+   リセット
+======================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  background: var(--bg);
+  color: var(--text);
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Noto Sans JP",
+    sans-serif;
+}
+
+
+/* ボタンの初期デザインを消す */
+button {
+  font: inherit;
+  color: inherit;
+}
+
+
+/* ========================================
+   アプリ全体
+======================================== */
+
+.app {
+  min-height: 100vh;
+
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+}
+
+
+/* ========================================
+   ヘッダー
+======================================== */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  max-width: 1500px;
+  margin: 0 auto 28px;
+}
+
+.header-title {
+  min-width: 0;
+}
+
+.app-name {
+  margin: 0 0 4px;
+
+  color: var(--pink-dark);
+
+  font-size: 13px;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+}
+
+#project-title {
+  margin: 0;
+
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 700;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-menu-button {
+  width: 44px;
+  height: 44px;
+
+  flex-shrink: 0;
+
+  border: 1px solid var(--gray-line);
+  border-radius: 50%;
+
+  background: var(--surface);
+
+  font-size: 24px;
+
+  cursor: pointer;
+}
+
+
+/* ========================================
+   メインレイアウト
+======================================== */
+
+.main-content {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    290px;
+
+  gap: 28px;
+
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+
+/* ========================================
+   ロードマップ領域
+======================================== */
+
+.roadmap-section {
+  min-width: 0;
+}
+
+.roadmap-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 28px;
+}
+
+.section-label {
+  margin: 0 0 5px;
+
+  color: var(--text-soft);
+
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: 0.15em;
+}
+
+.roadmap-header h2,
+.progress-card h2 {
+  margin: 0;
+
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.add-milestone-button {
+  padding: 10px 15px;
+
+  border: 1px solid #f6cfda;
+  border-radius: 999px;
+
+  background: var(--pink-light);
+  color: var(--pink-dark);
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+/* ========================================
+   ロードマップ本体
+
+   PCでは横並び。
+   長くなったら横スクロールできる。
+======================================== */
+
+.roadmap {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 0;
+
+  width: 100%;
+
+  overflow-x: auto;
+  overflow-y: visible;
+
+  padding:
+    30px
+    20px
+    45px;
+
+  scrollbar-width: thin;
+  scrollbar-color:
+    var(--gray)
+    transparent;
+}
+
+
+/* ========================================
+   マイルストーン
+======================================== */
+
+.milestone {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  flex: 0 0 180px;
+
+  min-width: 180px;
+}
+
+
+/* マイルストーン本体 */
+.milestone-button {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 132px;
+  min-height: 132px;
+
+  padding: 14px;
+
+  border: 2px solid var(--gray);
+  border-radius: var(--radius-large);
+
+  background: var(--surface);
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.milestone-button:active {
+  transform: scale(0.97);
+}
+
+
+/* アイコン */
+.milestone-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+
+  margin-bottom: 10px;
+
+  border-radius: 15px;
+
+  background: var(--gray-light);
+
+  font-size: 25px;
+}
+
+
+/* 名前 */
+.milestone-name {
+  font-size: 14px;
+  font-weight: 700;
+
+  text-align: center;
+}
+
+
+/* 状態文字 */
+.milestone-status {
+  margin-top: 7px;
+
+  color: var(--text-soft);
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+
+/* ========================================
+   完了済みマイルストーン
+======================================== */
+
+.milestone-complete .milestone-button {
+  border-color: var(--pink);
+}
+
+.milestone-complete .milestone-icon {
+  background: var(--pink-light);
+}
+
+.milestone-complete .milestone-status {
+  color: var(--pink-dark);
+}
+
+
+/* ========================================
+   現在地マイルストーン
+======================================== */
+
+.milestone-current .milestone-button {
+  border-color: var(--pink);
+
+  background: var(--pink-light);
+
+  box-shadow:
+    0 0 0 7px rgba(242, 154, 178, 0.12);
+}
+
+.milestone-current .milestone-icon {
+  background: #ffffff;
+}
+
+.current-label {
+  position: absolute;
+
+  top: -29px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  background: var(--mint);
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+
+/* ========================================
+   未来のマイルストーン
+======================================== */
+
+.milestone-future .milestone-button {
+  border-color: var(--gray);
+
+  background: #ffffff;
+}
+
+.milestone-future .milestone-icon {
+  background: var(--pink-light);
+
+  opacity: 0.72;
+}
+
+.milestone-future .milestone-name {
+  color: #66636e;
+}
+
+
+/* ========================================
+   マイルストーン同士をつなぐ線
+======================================== */
+
+.roadmap-line {
+  position: relative;
+
+  flex: 0 0 70px;
+
+  width: 70px;
+  height: 132px;
+}
+
+
+/* 線本体 */
+.roadmap-line::before {
+  content: "";
+
+  position: absolute;
+
+  top: 65px;
+  left: 0;
+
+  width: 100%;
+
+  border-top: 3px dashed var(--gray-line);
+}
+
+
+/* 完了したところまでの線 */
+.roadmap-line-complete::before {
+  border-top:
+    5px solid
+    var(--pink);
+}
+
+
+/* 未来 */
+.roadmap-line-future::before {
+  border-top:
+    3px dashed
+    var(--gray);
+}
+
+
+/* ========================================
+   タスクの枝
+======================================== */
+
+.task-branch {
+  position: relative;
+
+  width: 170px;
+
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+
+/* マイルストーンから下へ伸びる線 */
+.task-branch::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 50%;
+
+  width: 3px;
+  height: 20px;
+
+  transform: translateX(-50%);
+
+  border-radius: 999px;
+
+  background: var(--gray-line);
+}
+
+
+/* 現在の枝はピンク */
+.milestone-current
+.task-branch::before {
+  background: var(--pink);
+}
+
+
+/* ========================================
+   タスクリスト
+======================================== */
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+
+/* タスク */
+.task {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  width: 100%;
+
+  min-height: 46px;
+
+  padding: 10px 11px;
+
+  border:
+    1px solid
+    var(--gray-line);
+
+  border-radius: var(--radius-small);
+
+  background: #ffffff;
+
+  font-size: 12px;
+
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+/* 左側の枝線 */
+.task::before {
+  content: "";
+
+  position: absolute;
+
+  left: -13px;
+  top: 50%;
+
+  width: 13px;
+
+  border-top:
+    2px solid
+    var(--gray-line);
+}
+
+
+/* タスク内テキスト */
+.task-text {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.task-name {
+  line-height: 1.45;
+}
+
+
+/* ========================================
+   完了タスク
+======================================== */
+
+.task-complete {
+  border-color: #f5d3dd;
+
+  background: var(--pink-light);
+}
+
+.task-complete::before {
+  border-color: var(--pink);
+}
+
+.task-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 21px;
+  height: 21px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: var(--pink);
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* ========================================
+   今やっているタスク
+======================================== */
+
+.task-current {
+  border:
+    2px solid
+    var(--mint);
+
+  background:
+    var(--mint-light);
+
+  box-shadow:
+    0 4px 12px
+    rgba(117, 191, 174, 0.12);
+}
+
+.task-current::before {
+  border-color:
+    var(--mint);
+}
+
+.task-current .task-marker {
+  color:
+    var(--mint-dark);
+}
+
+
+/* ========================================
+   次にやるタスク
+======================================== */
+
+.task-next {
+  border-color:
+    #f3dda7;
+
+  background:
+    var(--yellow-light);
+}
+
+.task-next::before {
+  border-color:
+    var(--yellow);
+}
+
+.task-next .task-marker {
+  color:
+    var(--yellow-dark);
+}
+
+
+/* 今ここ・次はこれ */
+.task-badge {
+  width: fit-content;
+
+  padding:
+    3px
+    7px;
+
+  border-radius:
+    999px;
+
+  font-size:
+    9px;
+
+  font-weight:
+    700;
+}
+
+.task-current
+.task-badge {
+  background:
+    var(--mint);
+
+  color:
+    #ffffff;
+}
+
+.task-next
+.task-badge {
+  background:
+    var(--yellow);
+
+  color:
+    #755d22;
+}
+
+
+/* 通常マーカー */
+.task-marker {
+  flex-shrink:
+    0;
+
+  color:
+    var(--gray);
+
+  font-size:
+    13px;
+}
+
+
+/* ========================================
+   タスク追加ボタン
+======================================== */
+
+.add-task-button {
+  width:
+    100%;
+
+  margin-top:
+    10px;
+
+  padding:
+    9px;
+
+  border:
+    1px dashed
+    var(--gray);
+
+  border-radius:
+    var(--radius-small);
+
+  background:
+    transparent;
+
+  color:
+    var(--text-soft);
+
+  font-size:
+    11px;
+
+  cursor:
+    pointer;
+}
+
+
+/* ========================================
+   右側進捗パネル
+======================================== */
+
+.progress-panel {
+  min-width:
+    0;
+}
+
+.progress-card {
+  position:
+    sticky;
+
+  top:
+    20px;
+
+  padding:
+    22px;
+
+  border:
+    1px solid
+    var(--gray-line);
+
+  border-radius:
+    var(--radius-large);
+
+  background:
+    var(--surface);
+
+  box-shadow:
+    var(--shadow-soft);
+}
+
+
+/* 現在マイルストーン */
+.current-milestone {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  margin-top:
+    22px;
+
+  padding:
+    14px;
+
+  border-radius:
+    var(--radius-medium);
+
+  background:
+    var(--pink-light);
+}
+
+.current-milestone-icon {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    44px;
+
+  height:
+    44px;
+
+  flex-shrink:
+    0;
+
+  border-radius:
+    14px;
+
+  background:
+    #ffffff;
+
+  font-size:
+    23px;
+}
+
+.current-milestone
+div {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    3px;
+}
+
+.small-label {
+  color:
+    var(--text-soft);
+
+  font-size:
+    10px;
+}
+
+
+/* ========================================
+   進捗バー
+======================================== */
+
+.progress-area {
+  margin-top:
+    24px;
+}
+
+.progress-title {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  margin-bottom:
+    9px;
+
+  font-size:
+    12px;
+}
+
+.progress-title
+strong {
+  color:
+    var(--pink-dark);
+
+  font-size:
+    14px;
+}
+
+.progress-bar {
+  width:
+    100%;
+
+  height:
+    10px;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    999px;
+
+  background:
+    var(--gray-light);
+}
+
+.progress-bar-fill {
+  height:
+    100%;
+
+  border-radius:
+    inherit;
+
+  background:
+    var(--pink);
+}
+
+
+/* ========================================
+   現在・次タスク表示
+======================================== */
+
+.current-task-box,
+.next-task-box {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    4px;
+
+  margin-top:
+    17px;
+
+  padding:
+    14px;
+
+  border-radius:
+    var(--radius-medium);
+}
+
+.current-task-box {
+  border:
+    1px solid
+    #d5eee8;
+
+  background:
+    var(--mint-light);
+}
+
+.next-task-box {
+  border:
+    1px solid
+    #f4e4ba;
+
+  background:
+    var(--yellow-light);
+}
+
+.current-task-box
+strong,
+.next-task-box
+strong {
+  font-size:
+    12px;
+
+  line-height:
+    1.5;
+}
+
+
+/* ========================================
+   下部の凡例
+======================================== */
+
+.status-legend {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  flex-wrap:
+    wrap;
+
+  gap:
+    18px;
+
+  max-width:
+    1500px;
+
+  margin:
+    26px auto 0;
+
+  padding-top:
+    18px;
+
+  border-top:
+    1px solid
+    var(--gray-line);
+}
+
+.legend-item {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  color:
+    var(--text-soft);
+
+  font-size:
+    11px;
+}
+
+.legend-dot {
+  width:
+    10px;
+
+  height:
+    10px;
+
+  border-radius:
+    50%;
+}
+
+.legend-complete {
+  background:
+    var(--pink);
+}
+
+.legend-current {
+  background:
+    var(--mint);
+}
+
+.legend-next {
+  background:
+    var(--yellow);
+}
+
+.legend-future {
+  background:
+    var(--gray);
+}
+
+
+/* ========================================
+   ホバー
+   PCだけ少し反応させる
+======================================== */
+
+@media (hover: hover) {
+
+  .milestone-button:hover {
+    transform:
+      translateY(-3px);
+  }
+
+  .project-menu-button:hover,
+  .add-milestone-button:hover,
+  .add-task-button:hover {
+    filter:
+      brightness(0.98);
+  }
+
+}
+
+
+/* ========================================
+   タブレット・iPhone
+======================================== */
+
+@media (max-width: 900px) {
+
+  .app {
+    padding-left:
+      14px;
+
+    padding-right:
+      14px;
+  }
+
+  .main-content {
+    display:
+      block;
+  }
+
+  .roadmap-header {
+    align-items:
+      center;
+  }
+
+
+  /*
+    iPhoneでは右パネルを
+    ロードマップの下へ移動
+  */
+  .progress-panel {
+    margin-top:
+      24px;
+  }
+
+  .progress-card {
+    position:
+      static;
+  }
+
+}
+
+
+/* ========================================
+   小さいiPhone
+======================================== */
+
+@media (max-width: 520px) {
+
+  .app-header {
+    margin-bottom:
+      22px;
+  }
+
+  #project-title {
+    font-size:
+      22px;
+  }
+
+  .roadmap-header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+
+    gap:
+      13px;
+  }
+
+  .add-milestone-button {
+    align-self:
+      flex-start;
+  }
+
+  .roadmap {
+    /*
+      横方向のロードマップは維持する。
+      iPhoneでは横へスワイプして見る。
+    */
+    margin-left:
+      -14px;
+
+    width:
+      calc(100% + 28px);
+
+    padding-left:
+      22px;
+
+    padding-right:
+      22px;
+  }
+
+  .milestone {
+    flex-basis:
+      155px;
+
+    min-width:
+      155px;
+  }
+
+  .milestone-button {
+    width:
+      116px;
+
+    min-height:
+      116px;
+
+    border-radius:
+      21px;
+  }
+
+  .milestone-icon {
+    width:
+      41px;
+
+    height:
+      41px;
+
+    font-size:
+      22px;
+  }
+
+  .roadmap-line {
+    flex-basis:
+      48px;
+
+    width:
+      48px;
+
+    height:
+      116px;
+  }
+
+  .roadmap-line::before {
+    top:
+      57px;
+  }
+
+  .task-branch {
+    width:
+      150px;
+  }
+
+  .status-legend {
+    justify-content:
+      flex-start;
+  }
+
+}
