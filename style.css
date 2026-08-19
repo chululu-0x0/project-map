@@ -1703,3 +1703,325 @@ strong {
   }
 
 }
+
+/* ========================================
+   タスク操作
+======================================== */
+
+.task {
+  cursor: pointer;
+}
+
+
+/* PCでは少し浮く */
+@media (hover: hover) {
+
+  .task:hover {
+    transform: translateY(-2px);
+  }
+
+}
+
+
+/* ========================================
+   タスク状態選択
+   背景
+======================================== */
+
+.task-status-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    rgba(74, 72, 82, 0);
+
+  opacity: 0;
+
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+
+/* 表示 */
+.task-status-overlay.is-visible {
+  background:
+    rgba(74, 72, 82, 0.18);
+
+  opacity: 1;
+}
+
+
+/* ========================================
+   選択ウィンドウ
+======================================== */
+
+.task-status-dialog {
+  width: min(
+    330px,
+    100%
+  );
+
+  padding: 22px;
+
+  border:
+    1px solid
+    var(--gray-line);
+
+  border-radius:
+    24px;
+
+  background:
+    #ffffff;
+
+  box-shadow:
+    0 18px 50px
+    rgba(74, 72, 82, 0.16);
+
+  transform:
+    translateY(8px)
+    scale(0.98);
+
+  transition:
+    transform 0.2s ease;
+}
+
+
+.task-status-overlay.is-visible
+.task-status-dialog {
+
+  transform:
+    translateY(0)
+    scale(1);
+
+}
+
+
+/* 小見出し */
+.task-status-dialog-label {
+  margin:
+    0 0 5px;
+
+  color:
+    var(--text-soft);
+
+  font-size:
+    10px;
+
+  font-weight:
+    700;
+
+  letter-spacing:
+    0.1em;
+}
+
+
+/* タスク名 */
+.task-status-dialog h3 {
+  margin:
+    0 0 18px;
+
+  font-size:
+    16px;
+
+  line-height:
+    1.5;
+}
+
+
+/* ========================================
+   状態ボタン
+======================================== */
+
+.task-status-options {
+  display:
+    grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:
+    9px;
+}
+
+
+.task-status-option {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+  min-height:
+    48px;
+
+  padding:
+    10px 12px;
+
+  border:
+    1px solid
+    var(--gray-line);
+
+  border-radius:
+    14px;
+
+  background:
+    #ffffff;
+
+  cursor:
+    pointer;
+}
+
+
+/* 丸アイコン */
+.status-option-icon {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    24px;
+
+  height:
+    24px;
+
+  flex-shrink:
+    0;
+
+  border-radius:
+    50%;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+
+/* 完了 */
+.status-complete {
+  border-color:
+    #f4d2dc;
+
+  background:
+    var(--pink-light);
+}
+
+.status-complete
+.status-option-icon {
+  background:
+    var(--pink);
+
+  color:
+    #ffffff;
+}
+
+
+/* 今 */
+.status-current {
+  border-color:
+    #d3eee7;
+
+  background:
+    var(--mint-light);
+}
+
+.status-current
+.status-option-icon {
+  color:
+    var(--mint-dark);
+}
+
+
+/* 次 */
+.status-next {
+  border-color:
+    #f2dfad;
+
+  background:
+    var(--yellow-light);
+}
+
+.status-next
+.status-option-icon {
+  color:
+    var(--yellow-dark);
+}
+
+
+/* 未着手 */
+.status-future {
+  background:
+    var(--gray-light);
+}
+
+.status-future
+.status-option-icon {
+  color:
+    var(--gray);
+}
+
+
+/* ========================================
+   キャンセル
+======================================== */
+
+.task-status-cancel {
+  width:
+    100%;
+
+  margin-top:
+    12px;
+
+  padding:
+    10px;
+
+  border:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    var(--text-soft);
+
+  cursor:
+    pointer;
+}
+
+
+/* ========================================
+   iPhone
+======================================== */
+
+@media (max-width: 520px) {
+
+  .task-status-dialog {
+    border-radius:
+      22px;
+  }
+
+  .task-status-options {
+    grid-template-columns:
+      1fr;
+  }
+
+}
