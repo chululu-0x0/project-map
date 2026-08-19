@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#ffffff">
+
+  <title>Project Map</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ================================
+       アプリ全体
+  ================================= -->
+  <div class="app">
+
+    <!-- ================================
+         上部ヘッダー
+    ================================= -->
+    <header class="app-header">
+
+      <div class="header-title">
+        <p class="app-name">Project Map</p>
+
+        <h1 id="project-title">
+          サンプルプロジェクト
+        </h1>
+      </div>
+
+      <button
+        type="button"
+        class="project-menu-button"
+        id="project-menu-button"
+        aria-label="プロジェクトメニューを開く"
+      >
+        ⋯
+      </button>
+
+    </header>
+
+
+    <!-- ================================
+         メイン画面
+    ================================= -->
+    <main class="main-content">
+
+      <!-- ================================
+           ロードマップ側
+      ================================= -->
+      <section
+        class="roadmap-section"
+        aria-label="プロジェクトロードマップ"
+      >
+
+        <div class="roadmap-header">
+
+          <div>
+            <p class="section-label">
+              ROADMAP
+            </p>
+
+            <h2>
+              完成までの道のり
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            class="add-milestone-button"
+            id="add-milestone-button"
+          >
+            ＋ マイルストーン
+          </button>
+
+        </div>
+
+
+        <!-- ================================
+             ロードマップ本体
+        ================================= -->
+        <div
+          class="roadmap"
+          id="roadmap"
+        >
+
+
+          <!-- ================================
+               マイルストーン 1
+               完了済み
+          ================================= -->
+          <article
+            class="milestone milestone-complete"
+            data-milestone-id="planning"
+            data-status="complete"
+          >
+
+            <button
+              type="button"
+              class="milestone-button"
+              aria-expanded="false"
+            >
+
+              <span class="milestone-icon">
+                💡
+              </span>
+
+              <span class="milestone-name">
+                企画
+              </span>
+
+              <span class="milestone-status">
+                完了
+              </span>
+
+            </button>
+
+
+            <!-- タスク一覧 -->
+            <div
+              class="task-branch"
+              hidden
+            >
+
+              <div class="task-list">
+
+                <div
+                  class="task task-complete"
+                  data-status="complete"
+                >
+                  <span class="task-check">
+                    ✓
+                  </span>
+
+                  <span class="task-name">
+                    作りたいものを決める
+                  </span>
+                </div>
+
+
+                <div
+                  class="task task-complete"
+                  data-status="complete"
+                >
+                  <span class="task-check">
+                    ✓
+                  </span>
+
+                  <span class="task-name">
+                    必要な機能を整理する
+                  </span>
+                </div>
+
+
+                <div
+                  class="task task-complete"
+                  data-status="complete"
+                >
+                  <span class="task-check">
+                    ✓
+                  </span>
+
+                  <span class="task-name">
+                    Ver.1.0の完成条件を決める
+                  </span>
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                class="add-task-button"
+              >
+                ＋ タスクを追加
+              </button>
+
+            </div>
+
+          </article>
+
+
+          <!-- 進行線 -->
+          <div
+            class="roadmap-line roadmap-line-complete"
+            aria-hidden="true"
+          ></div>
+
+
+          <!-- ================================
+               マイルストーン 2
+               現在地
+          ================================= -->
+          <article
+            class="milestone milestone-current"
+            data-milestone-id="base"
+            data-status="current"
+          >
+
+            <div class="current-label">
+              今ここ
+            </div>
+
+            <button
+              type="button"
+              class="milestone-button"
+              aria-expanded="true"
+            >
+
+              <span class="milestone-icon">
+                ⚙️
+              </span>
+
+              <span class="milestone-name">
+                基本画面
+              </span>
+
+              <span class="milestone-status">
+                進行中
+              </span>
+
+            </button>
+
+
+            <!-- 現在地なので最初から展開 -->
+            <div class="task-branch">
+
+              <div class="task-list">
+
+                <div
+                  class="task task-complete"
+                  data-status="complete"
+                >
+                  <span class="task-check">
+                    ✓
+                  </span>
+
+                  <span class="task-name">
+                    専用フォルダを作る
+                  </span>
+                </div>
+
+
+                <div
+                  class="task task-complete"
+                  data-status="complete"
+                >
+                  <span class="task-check">
+                    ✓
+                  </span>
+
+                  <span class="task-name">
+                    GitHubリポジトリを作る
+                  </span>
+                </div>
+
+
+                <div
+                  class="task task-complete"
+                  data-status="complete"
+                >
+                  <span class="task-check">
+                    ✓
+                  </span>
+
+                  <span class="task-name">
+                    基本ファイルを用意する
+                  </span>
+                </div>
+
+
+                <div
+                  class="task task-current"
+                  data-status="current"
+                >
+
+                  <span class="task-marker">
+                    ●
+                  </span>
+
+                  <div class="task-text">
+
+                    <span class="task-name">
+                      基本画面を組み立てる
+                    </span>
+
+                    <span class="task-badge">
+                      今やってる
+                    </span>
+
+                  </div>
+
+                </div>
+
+
+                <div
+                  class="task task-next"
+                  data-status="next"
+                >
+
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <div class="task-text">
+
+                    <span class="task-name">
+                      デザインを整える
+                    </span>
+
+                    <span class="task-badge">
+                      次はこれ
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                class="add-task-button"
+              >
+                ＋ タスクを追加
+              </button>
+
+            </div>
+
+          </article>
+
+
+          <!-- 未来の進行線 -->
+          <div
+            class="roadmap-line roadmap-line-future"
+            aria-hidden="true"
+          ></div>
+
+
+          <!-- ================================
+               マイルストーン 3
+          ================================= -->
+          <article
+            class="milestone milestone-future"
+            data-milestone-id="roadmap"
+            data-status="future"
+          >
+
+            <button
+              type="button"
+              class="milestone-button"
+              aria-expanded="false"
+            >
+
+              <span class="milestone-icon">
+                🗺️
+              </span>
+
+              <span class="milestone-name">
+                ロードマップ機能
+              </span>
+
+              <span class="milestone-status">
+                未着手
+              </span>
+
+            </button>
+
+
+            <div
+              class="task-branch"
+              hidden
+            >
+
+              <div class="task-list">
+
+                <div
+                  class="task"
+                  data-status="future"
+                >
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    マイルストーンを追加
+                  </span>
+                </div>
+
+
+                <div
+                  class="task"
+                  data-status="future"
+                >
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    マイルストーンを線で接続
+                  </span>
+                </div>
+
+
+                <div
+                  class="task"
+                  data-status="future"
+                >
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    完了部分の線を色付け
+                  </span>
+                </div>
+
+
+                <div
+                  class="task"
+                  data-status="future"
+                >
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    今ここを表示
+                  </span>
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                class="add-task-button"
+              >
+                ＋ タスクを追加
+              </button>
+
+            </div>
+
+          </article>
+
+
+          <!-- 未来の進行線 -->
+          <div
+            class="roadmap-line roadmap-line-future"
+            aria-hidden="true"
+          ></div>
+
+
+          <!-- ================================
+               マイルストーン 4
+          ================================= -->
+          <article
+            class="milestone milestone-future"
+            data-milestone-id="tasks"
+            data-status="future"
+          >
+
+            <button
+              type="button"
+              class="milestone-button"
+              aria-expanded="false"
+            >
+
+              <span class="milestone-icon">
+                ☑️
+              </span>
+
+              <span class="milestone-name">
+                タスク管理
+              </span>
+
+              <span class="milestone-status">
+                未着手
+              </span>
+
+            </button>
+
+
+            <div
+              class="task-branch"
+              hidden
+            >
+
+              <div class="task-list">
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    タスクを追加・編集
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    完了状態を変更
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    今やっているタスクを指定
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    次のタスクを表示
+                  </span>
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                class="add-task-button"
+              >
+                ＋ タスクを追加
+              </button>
+
+            </div>
+
+          </article>
+
+
+          <!-- 未来の進行線 -->
+          <div
+            class="roadmap-line roadmap-line-future"
+            aria-hidden="true"
+          ></div>
+
+
+          <!-- ================================
+               マイルストーン 5
+          ================================= -->
+          <article
+            class="milestone milestone-future"
+            data-milestone-id="sync"
+            data-status="future"
+          >
+
+            <button
+              type="button"
+              class="milestone-button"
+              aria-expanded="false"
+            >
+
+              <span class="milestone-icon">
+                ☁️
+              </span>
+
+              <span class="milestone-name">
+                クラウド同期
+              </span>
+
+              <span class="milestone-status">
+                未着手
+              </span>
+
+            </button>
+
+
+            <div
+              class="task-branch"
+              hidden
+            >
+
+              <div class="task-list">
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    Supabaseを準備
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    ログイン機能
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    データをクラウド保存
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    PC・iPhone間で同期
+                  </span>
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                class="add-task-button"
+              >
+                ＋ タスクを追加
+              </button>
+
+            </div>
+
+          </article>
+
+
+          <!-- 未来の進行線 -->
+          <div
+            class="roadmap-line roadmap-line-future"
+            aria-hidden="true"
+          ></div>
+
+
+          <!-- ================================
+               最終マイルストーン
+          ================================= -->
+          <article
+            class="milestone milestone-future"
+            data-milestone-id="complete"
+            data-status="future"
+          >
+
+            <button
+              type="button"
+              class="milestone-button"
+              aria-expanded="false"
+            >
+
+              <span class="milestone-icon">
+                🏆
+              </span>
+
+              <span class="milestone-name">
+                Ver.1.0完成
+              </span>
+
+              <span class="milestone-status">
+                ゴール
+              </span>
+
+            </button>
+
+
+            <div
+              class="task-branch"
+              hidden
+            >
+
+              <div class="task-list">
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    Windowsで動作確認
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    iPhoneで動作確認
+                  </span>
+                </div>
+
+
+                <div class="task">
+                  <span class="task-marker">
+                    ○
+                  </span>
+
+                  <span class="task-name">
+                    PWAとしてホーム画面に追加
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+
+          </article>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================================
+           右側：現在地・進捗パネル
+      ================================= -->
+      <aside
+        class="progress-panel"
+        aria-label="現在の進捗"
+      >
+
+        <div class="progress-card">
+
+          <p class="section-label">
+            CURRENT
+          </p>
+
+          <h2>
+            現在地
+          </h2>
+
+
+          <div class="current-milestone">
+
+            <span class="current-milestone-icon">
+              ⚙️
+            </span>
+
+            <div>
+              <span class="small-label">
+                現在のマイルストーン
+              </span>
+
+              <strong>
+                基本画面
+              </strong>
+            </div>
+
+          </div>
+
+
+          <div class="progress-area">
+
+            <div class="progress-title">
+
+              <span>
+                全体進捗
+              </span>
+
+              <strong id="progress-percent">
+                20%
+              </strong>
+
+            </div>
+
+
+            <div
+              class="progress-bar"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="20"
+            >
+              <div
+                class="progress-bar-fill"
+                style="width: 20%;"
+              ></div>
+            </div>
+
+          </div>
+
+
+          <div class="current-task-box">
+
+            <span class="small-label">
+              今やっていること
+            </span>
+
+            <strong>
+              基本画面を組み立てる
+            </strong>
+
+          </div>
+
+
+          <div class="next-task-box">
+
+            <span class="small-label">
+              次にやること
+            </span>
+
+            <strong>
+              デザインを整える
+            </strong>
+
+          </div>
+
+        </div>
+
+      </aside>
+
+    </main>
+
+
+    <!-- ================================
+         下部：色の意味
+    ================================= -->
+    <footer class="status-legend">
+
+      <div class="legend-item">
+        <span class="legend-dot legend-complete"></span>
+        完了
+      </div>
+
+      <div class="legend-item">
+        <span class="legend-dot legend-current"></span>
+        今やっている
+      </div>
+
+      <div class="legend-item">
+        <span class="legend-dot legend-next"></span>
+        次にやる
+      </div>
+
+      <div class="legend-item">
+        <span class="legend-dot legend-future"></span>
+        未着手
+      </div>
+
+    </footer>
+
+  </div>
+
+
+  <!-- JavaScript -->
+  <script src="script.js"></script>
+
+</body>
+
+</html>
