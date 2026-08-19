@@ -6,6 +6,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupMilestoneToggle();
 
+  setupTaskStatusControl();
+
+  refreshMilestoneStatuses();
+
   refreshProjectProgress();
 
 });
@@ -34,10 +38,6 @@ function setupMilestoneToggle() {
     if (!button || !branch) return;
 
 
-    /* ----------------------------------------
-       初期状態
-    ---------------------------------------- */
-
     const isExpanded =
       button.getAttribute("aria-expanded") === "true";
 
@@ -54,10 +54,6 @@ function setupMilestoneToggle() {
 
     }
 
-
-    /* ----------------------------------------
-       クリックで開閉
-    ---------------------------------------- */
 
     button.addEventListener("click", () => {
 
@@ -125,11 +121,6 @@ function closeBranch(button, branch) {
   branch.classList.remove("is-open");
 
 
-  /*
-    アニメーション終了後に
-    完全非表示にする
-  */
-
   const finishClose = () => {
 
     if (
@@ -165,11 +156,6 @@ function closeBranch(button, branch) {
   );
 
 
-  /*
-    万一 transitionend が発生しなかった場合の
-    保険
-  */
-
   setTimeout(() => {
 
     if (
@@ -186,7 +172,732 @@ function closeBranch(button, branch) {
 
 
 /* ========================================
-   プロジェクト進捗を更新
+   タスク状態変更
+======================================== */
+
+function setupTaskStatusControl() {
+
+  const tasks =
+    document.querySelectorAll(".task");
+
+
+  tasks.forEach((task) => {
+
+    task.addEventListener("click", () => {
+
+      openTaskStatusDialog(task);
+
+    });
+
+  });
+
+}
+
+
+/* ========================================
+   タスク状態選択画面
+======================================== */
+
+function openTaskStatusDialog(task) {
+
+  closeTaskStatusDialog();
+
+
+  const taskName =
+    task.querySelector(".task-name")
+      ?.textContent
+      .trim() || "タスク";
+
+
+  const overlay =
+    document.createElement("div");
+
+  overlay.className =
+    "task-status-overlay";
+
+
+  const dialog =
+    document.createElement("div");
+
+  dialog.className =
+    "task-status-dialog";
+
+  dialog.setAttribute(
+    "role",
+    "dialog"
+  );
+
+  dialog.setAttribute(
+    "aria-modal",
+    "true"
+  );
+
+
+  /* タイトル */
+
+  const smallTitle =
+    document.createElement("p");
+
+  smallTitle.className =
+    "task-status-dialog-label";
+
+  smallTitle.textContent =
+    "タスクの状態";
+
+
+  const title =
+    document.createElement("h3");
+
+  title.textContent =
+    taskName;
+
+
+  /* 選択肢 */
+
+  const buttonArea =
+    document.createElement("div");
+
+  buttonArea.className =
+    "task-status-options";
+
+
+  const options = [
+
+    {
+      status: "complete",
+      icon: "✓",
+      label: "完了"
+    },
+
+    {
+      status: "current",
+      icon: "●",
+      label: "今やってる"
+    },
+
+    {
+      status: "next",
+      icon: "○",
+      label: "次にやる"
+    },
+
+    {
+      status: "future",
+      icon: "○",
+      label: "未着手"
+    }
+
+  ];
+
+
+  options.forEach((option) => {
+
+    const button =
+      document.createElement("button");
+
+    button.type =
+      "button";
+
+    button.className =
+      `task-status-option status-${option.status}`;
+
+    button.dataset.status =
+      option.status;
+
+
+    button.innerHTML = `
+      <span class="status-option-icon">
+        ${option.icon}
+      </span>
+
+      <span>
+        ${option.label}
+      </span>
+    `;
+
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        changeTaskStatus(
+          task,
+          option.status
+        );
+
+        closeTaskStatusDialog();
+
+      }
+    );
+
+
+    buttonArea.appendChild(button);
+
+  });
+
+
+  /* キャンセル */
+
+  const cancelButton =
+    document.createElement("button");
+
+  cancelButton.type =
+    "button";
+
+  cancelButton.className =
+    "task-status-cancel";
+
+  cancelButton.textContent =
+    "キャンセル";
+
+
+  cancelButton.addEventListener(
+    "click",
+    closeTaskStatusDialog
+  );
+
+
+  dialog.appendChild(smallTitle);
+
+  dialog.appendChild(title);
+
+  dialog.appendChild(buttonArea);
+
+  dialog.appendChild(cancelButton);
+
+
+  overlay.appendChild(dialog);
+
+  document.body.appendChild(overlay);
+
+
+  /*
+    背景を押して閉じる
+  */
+
+  overlay.addEventListener(
+    "click",
+    (event) => {
+
+      if (event.target === overlay) {
+
+        closeTaskStatusDialog();
+
+      }
+
+    }
+  );
+
+
+  /*
+    表示アニメーション
+  */
+
+  requestAnimationFrame(() => {
+
+    overlay.classList.add(
+      "is-visible"
+    );
+
+  });
+
+}
+
+
+/* ========================================
+   状態選択画面を閉じる
+======================================== */
+
+function closeTaskStatusDialog() {
+
+  const overlay =
+    document.querySelector(
+      ".task-status-overlay"
+    );
+
+
+  if (!overlay) return;
+
+
+  overlay.classList.remove(
+    "is-visible"
+  );
+
+
+  setTimeout(() => {
+
+    overlay.remove();
+
+  }, 200);
+
+}
+
+
+/* ========================================
+   タスク状態変更
+======================================== */
+
+function changeTaskStatus(task, status) {
+
+  /*
+    「今やってる」は
+    プロジェクト内で1個だけ
+  */
+
+  if (status === "current") {
+
+    document
+      .querySelectorAll(
+        '.task[data-status="current"]'
+      )
+      .forEach((otherTask) => {
+
+        if (otherTask === task) return;
+
+
+        renderTaskStatus(
+          otherTask,
+          "future"
+        );
+
+      });
+
+  }
+
+
+  /*
+    「次にやる」も1個だけ
+  */
+
+  if (status === "next") {
+
+    document
+      .querySelectorAll(
+        '.task[data-status="next"]'
+      )
+      .forEach((otherTask) => {
+
+        if (otherTask === task) return;
+
+
+        renderTaskStatus(
+          otherTask,
+          "future"
+        );
+
+      });
+
+  }
+
+
+  renderTaskStatus(
+    task,
+    status
+  );
+
+
+  /*
+    マイルストーンと
+    右側パネルを再計算
+  */
+
+  refreshMilestoneStatuses();
+
+  refreshProjectProgress();
+
+}
+
+
+/* ========================================
+   タスクの見た目を書き換える
+======================================== */
+
+function renderTaskStatus(task, status) {
+
+  const taskName =
+    task.querySelector(".task-name")
+      ?.textContent
+      .trim() || "タスク";
+
+
+  task.dataset.status =
+    status;
+
+
+  task.classList.remove(
+    "task-complete",
+    "task-current",
+    "task-next"
+  );
+
+
+  /*
+    中身を一旦空にする
+  */
+
+  task.innerHTML = "";
+
+
+  /* ----------------------------------------
+     完了
+  ---------------------------------------- */
+
+  if (status === "complete") {
+
+    task.classList.add(
+      "task-complete"
+    );
+
+
+    const check =
+      document.createElement("span");
+
+    check.className =
+      "task-check";
+
+    check.textContent =
+      "✓";
+
+
+    const name =
+      document.createElement("span");
+
+    name.className =
+      "task-name";
+
+    name.textContent =
+      taskName;
+
+
+    task.appendChild(check);
+
+    task.appendChild(name);
+
+    return;
+
+  }
+
+
+  /* ----------------------------------------
+     今やっている
+  ---------------------------------------- */
+
+  if (status === "current") {
+
+    task.classList.add(
+      "task-current"
+    );
+
+
+    createStatusTaskContent(
+      task,
+      taskName,
+      "●",
+      "今やってる"
+    );
+
+    return;
+
+  }
+
+
+  /* ----------------------------------------
+     次にやる
+  ---------------------------------------- */
+
+  if (status === "next") {
+
+    task.classList.add(
+      "task-next"
+    );
+
+
+    createStatusTaskContent(
+      task,
+      taskName,
+      "○",
+      "次はこれ"
+    );
+
+    return;
+
+  }
+
+
+  /* ----------------------------------------
+     未着手
+  ---------------------------------------- */
+
+  const marker =
+    document.createElement("span");
+
+  marker.className =
+    "task-marker";
+
+  marker.textContent =
+    "○";
+
+
+  const name =
+    document.createElement("span");
+
+  name.className =
+    "task-name";
+
+  name.textContent =
+    taskName;
+
+
+  task.appendChild(marker);
+
+  task.appendChild(name);
+
+}
+
+
+/* ========================================
+   現在 / 次タスクの中身
+======================================== */
+
+function createStatusTaskContent(
+  task,
+  taskName,
+  markerText,
+  badgeText
+) {
+
+  const marker =
+    document.createElement("span");
+
+  marker.className =
+    "task-marker";
+
+  marker.textContent =
+    markerText;
+
+
+  const textArea =
+    document.createElement("div");
+
+  textArea.className =
+    "task-text";
+
+
+  const name =
+    document.createElement("span");
+
+  name.className =
+    "task-name";
+
+  name.textContent =
+    taskName;
+
+
+  const badge =
+    document.createElement("span");
+
+  badge.className =
+    "task-badge";
+
+  badge.textContent =
+    badgeText;
+
+
+  textArea.appendChild(name);
+
+  textArea.appendChild(badge);
+
+
+  task.appendChild(marker);
+
+  task.appendChild(textArea);
+
+}
+
+
+/* ========================================
+   マイルストーン状態を自動更新
+======================================== */
+
+function refreshMilestoneStatuses() {
+
+  const milestones =
+    document.querySelectorAll(
+      ".milestone"
+    );
+
+
+  /*
+    古い「今ここ」を消す
+  */
+
+  document
+    .querySelectorAll(
+      ".current-label"
+    )
+    .forEach((label) => {
+
+      label.remove();
+
+    });
+
+
+  milestones.forEach((milestone) => {
+
+    const tasks =
+      [...milestone.querySelectorAll(".task")];
+
+
+    if (tasks.length === 0) return;
+
+
+    const hasCurrent =
+      tasks.some((task) => {
+
+        return (
+          getTaskStatus(task) === "current"
+        );
+
+      });
+
+
+    const allComplete =
+      tasks.every((task) => {
+
+        return (
+          getTaskStatus(task) === "complete"
+        );
+
+      });
+
+
+    milestone.classList.remove(
+      "milestone-complete",
+      "milestone-current",
+      "milestone-future"
+    );
+
+
+    const statusText =
+      milestone.querySelector(
+        ".milestone-status"
+      );
+
+
+    /* ----------------------------------------
+       全タスク完了
+    ---------------------------------------- */
+
+    if (allComplete) {
+
+      milestone.dataset.status =
+        "complete";
+
+      milestone.classList.add(
+        "milestone-complete"
+      );
+
+
+      if (statusText) {
+
+        statusText.textContent =
+          "完了";
+
+      }
+
+
+      return;
+
+    }
+
+
+    /* ----------------------------------------
+       現在タスクを含む
+    ---------------------------------------- */
+
+    if (hasCurrent) {
+
+      milestone.dataset.status =
+        "current";
+
+      milestone.classList.add(
+        "milestone-current"
+      );
+
+
+      if (statusText) {
+
+        statusText.textContent =
+          "進行中";
+
+      }
+
+
+      const currentLabel =
+        document.createElement("div");
+
+      currentLabel.className =
+        "current-label";
+
+      currentLabel.textContent =
+        "今ここ";
+
+
+      const button =
+        milestone.querySelector(
+          ".milestone-button"
+        );
+
+
+      milestone.insertBefore(
+        currentLabel,
+        button
+      );
+
+
+      return;
+
+    }
+
+
+    /* ----------------------------------------
+       それ以外
+    ---------------------------------------- */
+
+    milestone.dataset.status =
+      "future";
+
+    milestone.classList.add(
+      "milestone-future"
+    );
+
+
+    if (statusText) {
+
+      if (
+        milestone.dataset.milestoneId
+        === "complete"
+      ) {
+
+        statusText.textContent =
+          "ゴール";
+
+      } else {
+
+        statusText.textContent =
+          "未着手";
+
+      }
+
+    }
+
+  });
+
+}
+
+
+/* ========================================
+   プロジェクト進捗更新
 ======================================== */
 
 function refreshProjectProgress() {
@@ -212,10 +923,6 @@ function updateProgressPercent() {
     [...document.querySelectorAll(".task")];
 
 
-  /*
-    タスクがまだ1個もない場合
-  */
-
   if (tasks.length === 0) {
 
     setProgressDisplay(0);
@@ -225,25 +932,23 @@ function updateProgressPercent() {
   }
 
 
-  /*
-    完了タスクを数える
-  */
-
   const completedTasks =
     tasks.filter((task) => {
 
-      return getTaskStatus(task) === "complete";
+      return (
+        getTaskStatus(task)
+        === "complete"
+      );
 
     });
 
 
-  /*
-    完了数 ÷ 全タスク数
-  */
-
   const percent =
     Math.round(
-      (completedTasks.length / tasks.length) * 100
+      (
+        completedTasks.length /
+        tasks.length
+      ) * 100
     );
 
 
@@ -253,19 +958,25 @@ function updateProgressPercent() {
 
 
 /* ========================================
-   進捗表示を書き換える
+   進捗表示変更
 ======================================== */
 
 function setProgressDisplay(percent) {
 
   const percentText =
-    document.getElementById("progress-percent");
+    document.getElementById(
+      "progress-percent"
+    );
 
   const progressBar =
-    document.querySelector(".progress-bar");
+    document.querySelector(
+      ".progress-bar"
+    );
 
   const progressFill =
-    document.querySelector(".progress-bar-fill");
+    document.querySelector(
+      ".progress-bar-fill"
+    );
 
 
   if (percentText) {
@@ -309,21 +1020,24 @@ function updateCurrentMilestone() {
 
 
   /*
-    current指定が無い場合は、
-    最初の未完了マイルストーンを使う
+    現在タスクが無い場合
+    最初の未完了マイルストーン
   */
 
   if (!currentMilestone) {
 
     currentMilestone =
-      [...document.querySelectorAll(".milestone")]
-        .find((milestone) => {
+      [...document.querySelectorAll(
+        ".milestone"
+      )]
+      .find((milestone) => {
 
-          return (
-            milestone.dataset.status !== "complete"
-          );
+        return (
+          milestone.dataset.status
+          !== "complete"
+        );
 
-        });
+      });
 
   }
 
@@ -349,7 +1063,9 @@ function updateCurrentMilestone() {
   ) {
 
     panelName.textContent =
-      milestoneName.textContent.trim();
+      milestoneName
+        .textContent
+        .trim();
 
   }
 
@@ -366,7 +1082,10 @@ function updateCurrentTask() {
     [...document.querySelectorAll(".task")]
       .find((task) => {
 
-        return getTaskStatus(task) === "current";
+        return (
+          getTaskStatus(task)
+          === "current"
+        );
 
       });
 
@@ -391,13 +1110,17 @@ function updateCurrentTask() {
 
 
   const taskName =
-    currentTask.querySelector(".task-name");
+    currentTask.querySelector(
+      ".task-name"
+    );
 
 
   if (taskName) {
 
     panelText.textContent =
-      taskName.textContent.trim();
+      taskName
+        .textContent
+        .trim();
 
   }
 
@@ -414,14 +1137,17 @@ function updateNextTask() {
     [...document.querySelectorAll(".task")]
       .find((task) => {
 
-        return getTaskStatus(task) === "next";
+        return (
+          getTaskStatus(task)
+          === "next"
+        );
 
       });
 
 
   /*
-    next指定が無い場合は
-    最初の未着手タスクを候補にする
+    next指定がない場合
+    最初の未着手を表示
   */
 
   if (!nextTask) {
@@ -430,7 +1156,10 @@ function updateNextTask() {
       [...document.querySelectorAll(".task")]
         .find((task) => {
 
-          return getTaskStatus(task) === "future";
+          return (
+            getTaskStatus(task)
+            === "future"
+          );
 
         });
 
@@ -457,13 +1186,17 @@ function updateNextTask() {
 
 
   const taskName =
-    nextTask.querySelector(".task-name");
+    nextTask.querySelector(
+      ".task-name"
+    );
 
 
   if (taskName) {
 
     panelText.textContent =
-      taskName.textContent.trim();
+      taskName
+        .textContent
+        .trim();
 
   }
 
@@ -471,17 +1204,10 @@ function updateNextTask() {
 
 
 /* ========================================
-   タスク状態を取得
-
-   HTMLの data-status と
-   CSSクラスの両方を認識する
+   タスク状態取得
 ======================================== */
 
 function getTaskStatus(task) {
-
-  /*
-    data-status があれば最優先
-  */
 
   if (task.dataset.status) {
 
@@ -490,12 +1216,10 @@ function getTaskStatus(task) {
   }
 
 
-  /*
-    classから判定
-  */
-
   if (
-    task.classList.contains("task-complete")
+    task.classList.contains(
+      "task-complete"
+    )
   ) {
 
     return "complete";
@@ -504,7 +1228,9 @@ function getTaskStatus(task) {
 
 
   if (
-    task.classList.contains("task-current")
+    task.classList.contains(
+      "task-current"
+    )
   ) {
 
     return "current";
@@ -513,7 +1239,9 @@ function getTaskStatus(task) {
 
 
   if (
-    task.classList.contains("task-next")
+    task.classList.contains(
+      "task-next"
+    )
   ) {
 
     return "next";
@@ -521,18 +1249,13 @@ function getTaskStatus(task) {
   }
 
 
-  /*
-    何も指定されていなければ未着手
-  */
-
   return "future";
 
 }
 
 
 /* ========================================
-   後から他の処理でも
-   進捗更新を呼べるようにしておく
+   外部から再計算可能
 ======================================== */
 
 window.refreshProjectProgress =
