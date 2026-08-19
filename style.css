@@ -1369,3 +1369,178 @@ strong {
 .task-branch.is-open .task:nth-child(6) {
   transition-delay: 0.18s;
 }
+
+/* ========================================
+   タスク枝分かれ
+   ツリーライン改善版
+======================================== */
+
+/*
+  タスクカードの左側に
+  「縦の幹」を置くスペースを確保
+*/
+.task-branch {
+  width: 195px;
+}
+
+
+/* タスク一覧 */
+.task-list {
+  position: relative;
+
+  padding-left: 22px;
+}
+
+
+/* ========================================
+   マイルストーン
+        ↓
+   枝の幹まで伸びる縦線
+======================================== */
+
+.task-branch::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 50%;
+
+  width: 2px;
+  height: 43px;
+
+  transform: translateX(-50%);
+
+  border-radius: 999px;
+
+  background: var(--gray-line);
+}
+
+
+/* ========================================
+   マイルストーン中央
+       ↓
+       └──── 幹
+
+   の横部分
+======================================== */
+
+.task-branch::after {
+  content: "";
+
+  position: absolute;
+
+  top: 42px;
+  left: 8px;
+
+  width: calc(50% - 8px);
+  height: 2px;
+
+  border-radius: 999px;
+
+  background: var(--gray-line);
+}
+
+
+/* ========================================
+   タスク一覧の縦の幹
+======================================== */
+
+.task-list::before {
+  content: "";
+
+  position: absolute;
+
+  left: 8px;
+
+  /*
+    最初のタスク中央から
+    最後のタスク中央まで
+  */
+  top: 23px;
+  bottom: 23px;
+
+  width: 2px;
+
+  border-radius: 999px;
+
+  background: var(--gray-line);
+}
+
+
+/* ========================================
+   幹 → 各タスク
+======================================== */
+
+.task::before {
+  content: "";
+
+  position: absolute;
+
+  left: -14px;
+  top: 50%;
+
+  width: 14px;
+  height: 2px;
+
+  transform: translateY(-50%);
+
+  border: 0;
+
+  border-radius: 999px;
+
+  background: var(--gray-line);
+}
+
+
+/* ========================================
+   完了したタスクの枝
+======================================== */
+
+.task-complete::before {
+  background: var(--pink);
+}
+
+
+/* ========================================
+   今やっているタスクの枝
+======================================== */
+
+.task-current::before {
+  background: var(--mint);
+}
+
+
+/* ========================================
+   次にやるタスクの枝
+======================================== */
+
+.task-next::before {
+  background: var(--yellow);
+}
+
+
+/* ========================================
+   完了済み・現在マイルストーンから
+   最初の枝へ向かう線
+======================================== */
+
+.milestone-complete .task-branch::before,
+.milestone-complete .task-branch::after,
+.milestone-current .task-branch::before,
+.milestone-current .task-branch::after {
+  background: var(--pink);
+}
+
+
+/* ========================================
+   iPhone
+======================================== */
+
+@media (max-width: 520px) {
+
+  .task-branch {
+    width: 175px;
+  }
+
+}
