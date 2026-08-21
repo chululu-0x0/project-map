@@ -2004,3 +2004,9 @@ strong {
     transition: none !important;
   }
 }
+
+Exception: 
+Line |
+   2 |  … ョン';$i=$s.IndexOf($m)}; if($i -lt 0){throw 'marker not found'}; $s.Su …
+     |                                         ~~~~~~~~~~~~~~~~~~~~~~~~
+     | marker not found
