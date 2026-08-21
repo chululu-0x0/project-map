@@ -56,28 +56,130 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", () => centerCurrentMilestone(false));
 });
 
+// ========================================
+// ▼ ロードマップ内のクリック操作
+//
+// ・アイコンを押す
+//      → マイルストーン編集
+//
+// ・アイコン以外のマイルストーンを押す
+//      → そのマイルストーンを選択し、中央へ移動
+//
+// ・左右の三角を押す
+//      → 前後のマイルストーンへ移動
+//
+// ・タスクを押す
+//      → タスク編集
+// ========================================
+
 function setupRoadmapControls() {
   const roadmap = document.getElementById("roadmap");
-  roadmap?.addEventListener("click", (event) => {
-    const toggleButton = event.target.closest(".milestone-toggle");
-    const navigationButton = event.target.closest(".milestone-nav-button");
-    const task = event.target.closest(".task");
-    const addTaskButton = event.target.closest(".add-task-button");
 
-    if (toggleButton) {
-      const milestone = toggleButton.closest(".milestone");
-      toggleMilestone(toggleButton, milestone?.querySelector(".task-branch"));
+  roadmap?.addEventListener("click", (event) => {
+
+    const navigationButton =
+      event.target.closest(".milestone-nav-button");
+
+    const milestoneIcon =
+      event.target.closest(".milestone-icon");
+
+    const milestoneButton =
+      event.target.closest(".milestone-button");
+
+    const task =
+      event.target.closest(".task");
+
+    const addTaskButton =
+      event.target.closest(".add-task-button");
+
+
+    // ----------------------------------------
+    // 左右移動ボタン
+    // ----------------------------------------
+    if (navigationButton) {
+
+      animateNavigationButton(navigationButton);
+
+      navigateMilestone(
+        Number(navigationButton.dataset.direction)
+      );
+
+      return;
+    }
+
+
+    // ----------------------------------------
+    // マイルストーンのアイコン
+    // → 編集画面を開く
+    // ----------------------------------------
+    if (milestoneIcon) {
+
+      const milestone =
+        milestoneIcon.closest(".milestone");
+
+      selectMilestone(
+        milestone,
+        false
+      );
+
+      openMilestoneEditDialog(milestone);
+
+      return;
+    }
+
+
+    // ----------------------------------------
+    // マイルストーン本体
+    // → 選択して中央へ
+    //
+    // 編集画面は開かない
+    // ----------------------------------------
+    if (milestoneButton) {
+
+      const milestone =
+        milestoneButton.closest(".milestone");
+
       selectMilestone(milestone);
-    } else if (navigationButton) {
-      navigateMilestone(Number(navigationButton.dataset.direction));
-    } else if (task) {
-      if (Date.now() < suppressTaskClickUntil) return;
+
+      return;
+    }
+
+
+    // ----------------------------------------
+    // タスク
+    // ----------------------------------------
+    if (task) {
+
+      // 並び替え直後の誤クリック防止
+      if (Date.now() < suppressTaskClickUntil) {
+        return;
+      }
+
       openTaskStatusDialog(task);
-    } else if (addTaskButton) {
-      openAddTaskDialog(addTaskButton.closest(".milestone"));
+
+      return;
+    }
+
+
+    // ----------------------------------------
+    // タスク追加
+    // ----------------------------------------
+    if (addTaskButton) {
+
+      openAddTaskDialog(
+        addTaskButton.closest(".milestone")
+      );
     }
   });
-  document.getElementById("add-milestone-button")?.addEventListener("click", openAddMilestoneDialog);
+
+
+  // マイルストーン追加
+  document
+    .getElementById("add-milestone-button")
+    ?.addEventListener(
+      "click",
+      openAddMilestoneDialog
+    );
 }
 
 function toggleMilestone(button, branch) {
@@ -114,37 +216,255 @@ function centerCurrentMilestone(smooth = true) {
   centerMilestone(current, smooth);
 }
 
+// ========================================
+// ▼ マイルストーン用の補助UIを準備
+//
+// 今回からタスクは常時展開。
+// そのため「開閉ボタン」は作らない。
+//
+// 左右移動ボタンだけを追加する。
+// ========================================
+
 function ensureMilestoneControls(root = document) {
-  const milestones = root.matches?.(".milestone")
-    ? [root]
-    : [...root.querySelectorAll(".milestone")];
+
+  const milestones =
+    root.matches?.(".milestone")
+      ? [root]
+      : [...root.querySelectorAll(".milestone")];
+
+
   milestones.forEach((milestone) => {
-    milestone.querySelector(".milestone-button")?.setAttribute(
-      "onclick",
-      "window.openMilestoneEditor(this)"
-    );
-    if (!milestone.querySelector(".milestone-toggle")) {
-      const toggle = createElement("button", "milestone-toggle");
-      toggle.type = "button";
-      toggle.setAttribute("aria-label", "タスク一覧を開閉");
-      toggle.setAttribute(
+
+    const milestoneButton =
+      milestone.querySelector(".milestone-button");
+
+    const branch =
+      milestone.querySelector(".task-branch");
+
+    const icon =
+      milestone.querySelector(".milestone-icon");
+
+
+    // ----------------------------------------
+    // 以前の「マイルストーン全体クリックで編集」
+    // を解除する
+    // ----------------------------------------
+
+    milestoneButton?.removeAttribute("onclick");
+
+
+    // ----------------------------------------
+    // タスクは常時展開
+    // ----------------------------------------
+
+    if (branch) {
+
+      branch.hidden = false;
+
+      branch.classList.add("is-open");
+    }
+
+
+    if (milestoneButton) {
+
+      milestoneButton.setAttribute(
         "aria-expanded",
-        milestone.querySelector(".milestone-button")?.getAttribute("aria-expanded") || "false"
+        "true"
       );
-      toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>`;
-      milestone.querySelector(".milestone-button")?.after(toggle);
     }
 
-    if (!milestone.querySelector(".milestone-navigation")) {
-      const navigation = createElement("div", "milestone-navigation");
+
+    // ----------------------------------------
+    // アイコンが編集ボタンだと分かるようにする
+    // ----------------------------------------
+
+    if (icon) {
+
+      icon.setAttribute(
+        "title",
+        "マイルストーンを編集"
+      );
+
+      icon.setAttribute(
+        "aria-label",
+        "マイルストーンを編集"
+      );
+    }
+
+
+    // ----------------------------------------
+    // 古い開閉ボタンがあれば削除
+    // ----------------------------------------
+
+    milestone
+      .querySelector(".milestone-toggle")
+      ?.remove();
+
+
+    // ----------------------------------------
+    // 左右移動ボタン
+    // ----------------------------------------
+
+    if (
+      !milestone.querySelector(
+        ".milestone-navigation"
+      )
+    ) {
+
+      const navigation =
+        createElement(
+          "div",
+          "milestone-navigation"
+        );
+
+
       navigation.innerHTML = `
-        <button type="button" class="milestone-nav-button" data-direction="-1" aria-label="左のマイルストーンへ">←</button>
-        <button type="button" class="milestone-nav-button" data-direction="1" aria-label="右のマイルストーンへ">→</button>
-      `;
-      milestone.querySelector(".milestone-toggle")?.after(navigation);
-    }
 
+        <button
+          type="button"
+          class="milestone-nav-button milestone-nav-left"
+          data-direction="-1"
+          aria-label="左のマイルストーンへ"
+        >
+          ◀
+        </button>
+
+        <button
+          type="button"
+          class="milestone-nav-button milestone-nav-right"
+          data-direction="1"
+          aria-label="右のマイルストーンへ"
+        >
+          ▶
+        </button>
+
+      `;
+
+
+      // マイルストーン本体の直後へ配置
+      milestoneButton?.after(navigation);
+    }
   });
+
+
+  // 順番による色を反映
+  applyMilestoneOrderColors();
+
+  // 一番端の矢印を無効化
+  updateMilestoneNavigationState();
+}
+
+// ========================================
+// ▼ マイルストーンの順番で色を決める
+//
+// マイルストーン自身には固定色を保存しない。
+// 現在の並び順を見て毎回色を割り当て直す。
+// ========================================
+
+function applyMilestoneOrderColors() {
+
+  const milestones =
+    getMilestones();
+
+
+  milestones.forEach(
+    (milestone, index) => {
+
+      const color =
+        MILESTONE_ORDER_COLORS[
+          index % MILESTONE_ORDER_COLORS.length
+        ];
+
+
+      // CSSで使える変数として設定
+      milestone.style.setProperty(
+        "--milestone-order-color",
+        color.main
+      );
+
+      milestone.style.setProperty(
+        "--milestone-order-soft",
+        color.soft
+      );
+    }
+  );
+}
+
+
+// ========================================
+// ▼ 左右矢印の有効・無効
+//
+// 一番左では「左」を押せない。
+// 一番右では「右」を押せない。
+// ========================================
+
+function updateMilestoneNavigationState() {
+
+  const milestones =
+    getMilestones();
+
+
+  milestones.forEach(
+    (milestone, index) => {
+
+      const left =
+        milestone.querySelector(
+          '.milestone-nav-button[data-direction="-1"]'
+        );
+
+      const right =
+        milestone.querySelector(
+          '.milestone-nav-button[data-direction="1"]'
+        );
+
+
+      if (left) {
+
+        left.disabled =
+          index === 0;
+      }
+
+
+      if (right) {
+
+        right.disabled =
+          index === milestones.length - 1;
+      }
+    }
+  );
+}
+
+
+// ========================================
+// ▼ 左右矢印を押したときのぽよん
+//
+// 同じボタンを連続で押しても
+// アニメーションを最初から再生できるように、
+// 一度クラスを外してから付け直す。
+// ========================================
+
+function animateNavigationButton(button) {
+
+  button.classList.remove(
+    "is-nav-popping"
+  );
+
+  // アニメーションを再スタートさせるため
+  // 一度ブラウザに状態を確定させる
+  void button.offsetWidth;
+
+  button.classList.add(
+    "is-nav-popping"
+  );
+
+
+  setTimeout(() => {
+
+    button.classList.remove(
+      "is-nav-popping"
+    );
+
+  }, 430);
 }
 
 function selectMilestone(milestone, center = true) {
@@ -330,15 +650,60 @@ function openTaskStatusDialog(task) {
   openDialog({ label: "タスクの状態", title: getTaskName(task), content: wrapper });
 }
 
-function animateTaskStateChange(task, update) {
-  task.classList.remove("is-state-changing", "is-state-changed");
-  task.classList.add("is-state-changing");
+// ========================================
+// ▼ タスク状態変更アニメーション
+//
+// ① きゅっと縮む
+// ② 状態を変更
+// ③ 大きくぽよん
+// ④ 少し縮む
+// ⑤ もう一度膨らむ
+// ⑥ 元の大きさへ
+// ========================================
+
+function animateTaskStateChange(
+  task,
+  update
+) {
+
+  task.classList.remove(
+    "is-state-changing",
+    "is-state-changed"
+  );
+
+
+  // 最初にきゅっと縮む
+  task.classList.add(
+    "is-state-changing"
+  );
+
+
   setTimeout(() => {
+
+    // 実際の状態をここで変更
     update();
-    task.classList.remove("is-state-changing");
-    task.classList.add("is-state-changed");
-    setTimeout(() => task.classList.remove("is-state-changed"), 360);
-  }, 110);
+
+
+    task.classList.remove(
+      "is-state-changing"
+    );
+
+
+    // 強めのぽよん
+    task.classList.add(
+      "is-state-changed"
+    );
+
+
+    setTimeout(() => {
+
+      task.classList.remove(
+        "is-state-changed"
+      );
+
+    }, 620);
+
+  }, 130);
 }
 
 function changeTaskStatus(task, status) {
@@ -554,11 +919,25 @@ function moveMilestone(milestone, direction) {
     roadmap.appendChild(item);
     if (lines[itemIndex]) roadmap.appendChild(lines[itemIndex]);
   });
-  closeDialog();
-  refreshMilestoneStatuses();
-  refreshProgressPanel();
-  selectMilestone(milestone);
-  saveProjectState();
+closeDialog();
+
+
+// ========================================
+// 並び替え後の表示をまとめて更新
+// ========================================
+
+refreshProject({
+  animate: false,
+  center: false
+});
+
+
+// 新しい順位のマイルストーンを選択
+selectMilestone(milestone);
+
+
+// 保存
+saveProjectState();
 }
 
 function appendMilestone({ name, firstTask, iconKey }) {
