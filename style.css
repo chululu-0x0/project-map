@@ -2521,3 +2521,470 @@ Line |
     right: -8px;
   }
 }
+
+/* ========================================
+   2026-08-21
+   ロードマップ操作仕様・デザイン調整
+
+   ▼ 今回の変更
+   ・左右矢印を廃止
+   ・PCマウス横ドラッグ
+   ・中央にあるものだけ編集可能
+   ・中央のタスクだけ並び替え可能
+   ・文字選択を防止
+   ・ダブルタップ拡大を防止
+   ・順位色をマイルストーン全体へ反映
+   ・マイルストーンのぼよんホバー
+   ・進捗線のズレ修正
+   ・タスク接続線の隙間修正
+======================================== */
+
+
+/* ========================================
+   ▼ 文字選択を防止
+
+   連打や長押しで
+   青い文字選択範囲が出るのを防ぐ。
+======================================== */
+
+body {
+
+  user-select:
+    none;
+
+  -webkit-user-select:
+    none;
+
+  -webkit-touch-callout:
+    none;
+}
+
+
+/* ========================================
+   入力欄だけは文字編集が必要なので
+   選択を許可する。
+======================================== */
+
+input,
+textarea {
+
+  user-select:
+    text;
+
+  -webkit-user-select:
+    text;
+
+  -webkit-touch-callout:
+    default;
+}
+
+
+/* ========================================
+   ▼ ダブルタップ拡大防止
+
+   touch-action: manipulation は
+   通常のスクロール等を残しながら、
+   ボタン連打によるダブルタップズームを
+   起こりにくくする。
+======================================== */
+
+button,
+.task,
+.milestone-button,
+.add-task-button,
+.add-milestone-button {
+
+  touch-action:
+    manipulation;
+}
+
+
+/* ========================================
+   ▼ 前回の左右矢印を完全非表示
+
+   JavaScript側でも削除するが、
+   古いDOMが一瞬残った場合にも
+   表示されないようCSSでも保険を掛ける。
+======================================== */
+
+.milestone-navigation,
+.milestone-nav-button {
+
+  display:
+    none !important;
+}
+
+
+/* ========================================
+   ▼ マイルストーン間の進捗線
+
+   原因：
+   点線はiPhoneで top:57px に変わるのに、
+   ピンク線は top:64px のままだったため
+   上下にズレていた。
+
+   今回から両方とも
+   --roadmap-line-y という
+   共通の基準位置を使用する。
+======================================== */
+
+.roadmap-line {
+
+  --roadmap-line-y:
+    65px;
+}
+
+
+/* 点線 */
+.roadmap-line::before,
+.roadmap-line-complete::before,
+.roadmap-line-future::before {
+
+  top:
+    var(
+      --roadmap-line-y
+    );
+}
+
+
+/* 完了部分のピンク線 */
+.roadmap-line::after {
+
+  top:
+    calc(
+      var(
+        --roadmap-line-y
+      ) - 2px
+    );
+}
+
+
+/* ========================================
+   ▼ iPhone
+
+   マイルストーンが116pxになるため
+   中央線は57px。
+======================================== */
+
+@media (max-width: 520px) {
+
+  .roadmap-line {
+
+    --roadmap-line-y:
+      57px;
+  }
+}
+
+
+/* ========================================
+   ▼ マイルストーン全体を順位色へ
+
+   前回はアイコンだけ色が変わっていた。
+
+   今回は
+   ・枠線
+   ・薄い背景
+   ・アイコン
+   ・状態文字
+   を同じ順位色でまとめる。
+======================================== */
+
+.milestone-complete
+.milestone-button,
+
+.milestone-current
+.milestone-button,
+
+.milestone-future
+.milestone-button {
+
+  border-color:
+    var(
+      --milestone-order-color,
+      var(--pink)
+    );
+
+  background:
+    var(
+      --milestone-order-soft,
+      var(--pink-light)
+    );
+
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+
+/* 状態文字も順位色 */
+.milestone-complete
+.milestone-status,
+
+.milestone-current
+.milestone-status,
+
+.milestone-future
+.milestone-status {
+
+  color:
+    var(
+      --milestone-order-color,
+      var(--pink)
+    );
+}
+
+
+/* ========================================
+   ▼ アイコン
+
+   もう単独の編集ボタンではないので、
+   アイコンだけのホバー拡大を廃止する。
+
+   マイルストーン全体で
+   一つのアニメーションに統一。
+======================================== */
+
+.milestone-icon {
+
+  cursor:
+    inherit;
+}
+
+
+@media (hover: hover) {
+
+  .milestone-icon:hover {
+
+    transform:
+      none;
+
+    box-shadow:
+      none;
+  }
+}
+
+
+.milestone-icon:active {
+
+  transform:
+    none;
+}
+
+
+/* ========================================
+   ▼ マイルストーンの「ぼよんぼよん」
+
+   マウスカーソルが重なったとき、
+
+   少し浮く
+   ↓
+   少し下がる
+   ↓
+   また浮く
+   ↓
+   戻る
+
+   という軽いバウンド。
+======================================== */
+
+@media (hover: hover) {
+
+  .milestone-button:hover {
+
+    animation:
+      milestone-soft-bounce
+      0.58s
+      cubic-bezier(
+        0.2,
+        1.25,
+        0.4,
+        1
+      );
+
+    z-index:
+      3;
+  }
+}
+
+
+@keyframes milestone-soft-bounce {
+
+  0% {
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+
+  25% {
+
+    transform:
+      translateY(-7px)
+      scale(1.035);
+  }
+
+
+  48% {
+
+    transform:
+      translateY(1px)
+      scale(0.99);
+  }
+
+
+  70% {
+
+    transform:
+      translateY(-4px)
+      scale(1.02);
+  }
+
+
+  86% {
+
+    transform:
+      translateY(-1px)
+      scale(1.005);
+  }
+
+
+  100% {
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+
+/* ========================================
+   ▼ 選択中マイルストーン
+
+   中央表示対象であることが
+   少し分かる程度の影。
+
+   ホバーアニメーションとは
+   役割を分ける。
+======================================== */
+
+.milestone.is-selected
+.milestone-button {
+
+  box-shadow:
+    0 8px 24px
+    rgba(
+      74,
+      72,
+      82,
+      0.10
+    );
+}
+
+
+/* ========================================
+   ▼ タスク接続線の隙間修正
+
+   以前は
+   margin-top:24px
+   があるため、
+
+   マイルストーン
+        ↓
+      空白24px
+        ↓
+   接続線
+
+   となっていた。
+
+   marginを0にして、
+   マイルストーン直下から
+   線を開始する。
+======================================== */
+
+.task-branch,
+.task-branch.is-open {
+
+  margin-top:
+    0;
+
+  padding-top:
+    20px;
+}
+
+
+/* ========================================
+   マイルストーン直下から
+   最初のタスクまで線をつなぐ
+======================================== */
+
+.task-branch::before {
+
+  top:
+    0;
+
+  height:
+    20px;
+}
+
+
+/* ========================================
+   ▼ タスク並び替え中
+
+   タスクカードに付いている
+   下方向の進捗線を一時的に消す。
+
+   これでカードだけが動き、
+   線が付いてこなくなる。
+======================================== */
+
+.task.is-dragging::after {
+
+  opacity:
+    0;
+}
+
+
+/* ========================================
+   ▼ PCロードマップ横ドラッグ
+======================================== */
+
+@media (hover: hover) and (pointer: fine) {
+
+  .roadmap {
+
+    cursor:
+      grab;
+  }
+
+
+  .roadmap.is-pointer-dragging {
+
+    cursor:
+      grabbing;
+
+    /* ドラッグ中だけ
+       スナップの抵抗を外す */
+    scroll-snap-type:
+      none;
+
+    scroll-behavior:
+      auto;
+  }
+}
+
+
+/* ========================================
+   タスクやボタン上では
+   普通のポインター表示
+======================================== */
+
+.task,
+.add-task-button,
+.add-milestone-button,
+.project-menu-button {
+
+  cursor:
+    pointer;
+}
