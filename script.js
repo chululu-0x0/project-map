@@ -1,1230 +1,416 @@
-/* ========================================
-   Project Map
-======================================== */
+const STORAGE_KEY = "project-map-state-v4";
+
+const MILESTONE_ICONS = {
+  compass: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M29.5 18.5 26 26l-7.5 3.5L22 22z"/><circle cx="24" cy="24" r="2"/></svg>`,
+  flag: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 39V10"/><path d="M16 11h18l-5 7 5 7H16z"/><path d="M10 39h12"/></svg>`,
+  star: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m24 8 4.7 9.6 10.6 1.5-7.7 7.5 1.8 10.6L24 32.3l-9.4 4.9 1.8-10.6-7.7-7.5 10.6-1.5z"/></svg>`
+};
 
 document.addEventListener("DOMContentLoaded", () => {
-
-  setupMilestoneToggle();
-
-  setupTaskStatusControl();
-
-  refreshMilestoneStatuses();
-
-  refreshProjectProgress();
-
+  restoreProjectState();
+  normalizeTaskStatuses();
+  setupRoadmapControls();
+  refreshProject({ animate: false, center: true });
+  requestAnimationFrame(() => document.getElementById("roadmap")?.classList.add("is-ready"));
+  window.addEventListener("resize", () => centerCurrentMilestone(false));
 });
 
-
-/* ========================================
-   マイルストーン
-   展開 / 折りたたみ
-======================================== */
-
-function setupMilestoneToggle() {
-
-  const milestones =
-    document.querySelectorAll(".milestone");
-
-
-  milestones.forEach((milestone) => {
-
-    const button =
-      milestone.querySelector(".milestone-button");
-
-    const branch =
-      milestone.querySelector(".task-branch");
-
-
-    if (!button || !branch) return;
-
-
-    const isExpanded =
-      button.getAttribute("aria-expanded") === "true";
-
-
-    if (isExpanded) {
-
-      branch.hidden = false;
-
-      requestAnimationFrame(() => {
-
-        branch.classList.add("is-open");
-
-      });
-
-    }
-
-
-    button.addEventListener("click", () => {
-
-      const currentlyExpanded =
-        button.getAttribute("aria-expanded") === "true";
-
-
-      if (currentlyExpanded) {
-
-        closeBranch(button, branch);
-
-      } else {
-
-        openBranch(button, branch);
-
-      }
-
-    });
-
-  });
-
-}
-
-
-/* ========================================
-   マイルストーンを開く
-======================================== */
-
-function openBranch(button, branch) {
-
-  button.setAttribute(
-    "aria-expanded",
-    "true"
-  );
-
-
-  branch.hidden = false;
-
-
-  requestAnimationFrame(() => {
-
-    requestAnimationFrame(() => {
-
-      branch.classList.add("is-open");
-
-    });
-
-  });
-
-}
-
-
-/* ========================================
-   マイルストーンを閉じる
-======================================== */
-
-function closeBranch(button, branch) {
-
-  button.setAttribute(
-    "aria-expanded",
-    "false"
-  );
-
-
-  branch.classList.remove("is-open");
-
-
-  const finishClose = () => {
-
-    if (
-      button.getAttribute("aria-expanded") === "false"
-    ) {
-
-      branch.hidden = true;
-
-    }
-
-  };
-
-
-  const onTransitionEnd = (event) => {
-
-    if (event.target !== branch) return;
-
-
-    branch.removeEventListener(
-      "transitionend",
-      onTransitionEnd
-    );
-
-
-    finishClose();
-
-  };
-
-
-  branch.addEventListener(
-    "transitionend",
-    onTransitionEnd
-  );
-
-
-  setTimeout(finishClose, 400);
-
-}
-
-
-/* ========================================
-   タスク状態変更
-======================================== */
-
-function setupTaskStatusControl() {
-
-  const tasks =
-    document.querySelectorAll(".task");
-
-
-  tasks.forEach((task) => {
-
-    task.addEventListener("click", () => {
-
+function setupRoadmapControls() {
+  const roadmap = document.getElementById("roadmap");
+  roadmap?.addEventListener("click", (event) => {
+    const milestoneButton = event.target.closest(".milestone-button");
+    const task = event.target.closest(".task");
+    const addTaskButton = event.target.closest(".add-task-button");
+
+    if (milestoneButton) {
+      const milestone = milestoneButton.closest(".milestone");
+      toggleMilestone(milestoneButton, milestone?.querySelector(".task-branch"));
+      centerMilestone(milestone);
+    } else if (task) {
       openTaskStatusDialog(task);
-
-    });
-
+    } else if (addTaskButton) {
+      openAddTaskDialog(addTaskButton.closest(".milestone"));
+    }
   });
-
+  document.getElementById("add-milestone-button")?.addEventListener("click", openAddMilestoneDialog);
 }
 
+function toggleMilestone(button, branch) {
+  if (!button || !branch) return;
+  const willOpen = button.getAttribute("aria-expanded") !== "true";
+  button.setAttribute("aria-expanded", String(willOpen));
+  if (willOpen) {
+    branch.hidden = false;
+    requestAnimationFrame(() => branch.classList.add("is-open"));
+  } else {
+    branch.classList.remove("is-open");
+    setTimeout(() => {
+      if (button.getAttribute("aria-expanded") === "false") branch.hidden = true;
+    }, 400);
+  }
+  saveProjectState();
+}
 
-/* ========================================
-   タスク状態選択画面
-======================================== */
+function centerMilestone(milestone, smooth = true) {
+  const roadmap = document.getElementById("roadmap");
+  if (!roadmap || !milestone) return;
+  const left = milestone.offsetLeft - (roadmap.clientWidth - milestone.offsetWidth) / 2;
+  roadmap.scrollTo({ left: Math.max(0, left), behavior: smooth ? "smooth" : "auto" });
+}
+
+function centerCurrentMilestone(smooth = true) {
+  const current = document.querySelector('.milestone[data-status="current"]') ||
+    getMilestones().find((milestone) => milestone.dataset.status !== "complete");
+  centerMilestone(current, smooth);
+}
 
 function openTaskStatusDialog(task) {
-
-  closeTaskStatusDialog();
-
-
-  const taskName =
-    task.querySelector(".task-name")
-      ?.textContent
-      .trim() || "タスク";
-
-
-  const overlay =
-    document.createElement("div");
-
-  overlay.className =
-    "task-status-overlay";
-
-
-  const dialog =
-    document.createElement("div");
-
-  dialog.className =
-    "task-status-dialog";
-
-  dialog.setAttribute(
-    "role",
-    "dialog"
-  );
-
-  dialog.setAttribute(
-    "aria-modal",
-    "true"
-  );
-
-
-  /* タイトル */
-
-  const smallTitle =
-    document.createElement("p");
-
-  smallTitle.className =
-    "task-status-dialog-label";
-
-  smallTitle.textContent =
-    "タスクの状態";
-
-
-  const title =
-    document.createElement("h3");
-
-  title.textContent =
-    taskName;
-
-
-  /* 選択肢 */
-
-  const buttonArea =
-    document.createElement("div");
-
-  buttonArea.className =
-    "task-status-options";
-
-
-  const options = [
-
-    {
-      status: "complete",
-      icon: "✓",
-      label: "完了"
-    },
-
-    {
-      status: "current",
-      icon: "●",
-      label: "今やってる"
-    },
-
-    {
-      status: "next",
-      icon: "○",
-      label: "次にやる"
-    },
-
-    {
-      status: "future",
-      icon: "○",
-      label: "未着手"
-    }
-
-  ];
-
-
-  options.forEach((option) => {
-
-    const button =
-      document.createElement("button");
-
-    button.type =
-      "button";
-
-    button.className =
-      `task-status-option status-${option.status}`;
-
-    button.dataset.status =
-      option.status;
-
-
-    button.innerHTML = `
-      <span class="status-option-icon">
-        ${option.icon}
-      </span>
-
-      <span>
-        ${option.label}
-      </span>
-    `;
-
-
-    button.addEventListener(
-      "click",
-      () => {
-
-        changeTaskStatus(
-          task,
-          option.status
-        );
-
-        closeTaskStatusDialog();
-
-      }
-    );
-
-
-    buttonArea.appendChild(button);
-
+  const content = createElement("div", "task-status-options");
+  [
+    ["complete", "✓", "完了"],
+    ["current", "●", "今やってる"],
+    ["next", "○", "次にやる"],
+    ["future", "○", "未着手"]
+  ].forEach(([status, icon, label]) => {
+    const button = createElement("button", `task-status-option status-${status}`);
+    button.type = "button";
+    button.innerHTML = `<span class="status-option-icon">${icon}</span><span>${label}</span>`;
+    button.addEventListener("click", () => {
+      changeTaskStatus(task, status);
+      closeDialog();
+    });
+    content.appendChild(button);
   });
-
-
-  /* キャンセル */
-
-  const cancelButton =
-    document.createElement("button");
-
-  cancelButton.type =
-    "button";
-
-  cancelButton.className =
-    "task-status-cancel";
-
-  cancelButton.textContent =
-    "キャンセル";
-
-
-  cancelButton.addEventListener(
-    "click",
-    closeTaskStatusDialog
-  );
-
-
-  dialog.appendChild(smallTitle);
-
-  dialog.appendChild(title);
-
-  dialog.appendChild(buttonArea);
-
-  dialog.appendChild(cancelButton);
-
-
-  overlay.appendChild(dialog);
-
-  document.body.appendChild(overlay);
-
-
-  /*
-    背景を押して閉じる
-  */
-
-  overlay.addEventListener(
-    "click",
-    (event) => {
-
-      if (event.target === overlay) {
-
-        closeTaskStatusDialog();
-
-      }
-
-    }
-  );
-
-
-  /*
-    表示アニメーション
-  */
-
-  requestAnimationFrame(() => {
-
-    overlay.classList.add(
-      "is-visible"
-    );
-
-  });
-
+  openDialog({ label: "タスクの状態", title: getTaskName(task), content });
 }
-
-
-/* ========================================
-   状態選択画面を閉じる
-======================================== */
-
-function closeTaskStatusDialog() {
-
-  const overlay =
-    document.querySelector(
-      ".task-status-overlay"
-    );
-
-
-  if (!overlay) return;
-
-
-  overlay.classList.remove(
-    "is-visible"
-  );
-
-
-  setTimeout(() => {
-
-    overlay.remove();
-
-  }, 200);
-
-}
-
-
-/* ========================================
-   タスク状態変更
-======================================== */
 
 function changeTaskStatus(task, status) {
-
-  /*
-    「今やってる」は
-    プロジェクト内で1個だけ
-  */
-
-  if (
-    status === "current" ||
-    status === "next"
-  ) {
-
-    document
-      .querySelectorAll(
-        `.task[data-status="${status}"]`
-      )
-      .forEach((otherTask) => {
-
-        if (otherTask === task) return;
-
-
-        renderTaskStatus(
-          otherTask,
-          "future"
-        );
-
-      });
-
-  }
-
-
-  renderTaskStatus(
-    task,
-    status
-  );
-
-
-  /*
-    マイルストーンと
-    右側パネルを再計算
-  */
-
-  refreshMilestoneStatuses();
-
-  refreshProjectProgress();
-
-}
-
-
-/* ========================================
-   タスクの見た目を書き換える
-======================================== */
-
-function renderTaskStatus(task, status) {
-
-  const taskName =
-    task.querySelector(".task-name")
-      ?.textContent
-      .trim() || "タスク";
-
-
-  task.dataset.status =
-    status;
-
-
-  task.classList.remove(
-    "task-complete",
-    "task-current",
-    "task-next"
-  );
-
-
-  /*
-    中身を一旦空にする
-  */
-
-  task.innerHTML = "";
-
-
-  /* ----------------------------------------
-     完了
-  ---------------------------------------- */
-
-  if (status === "complete") {
-
-    task.classList.add(
-      "task-complete"
-    );
-
-
-    const check =
-      document.createElement("span");
-
-    check.className =
-      "task-check";
-
-    check.textContent =
-      "✓";
-
-
-    const name =
-      document.createElement("span");
-
-    name.className =
-      "task-name";
-
-    name.textContent =
-      taskName;
-
-
-    task.appendChild(check);
-
-    task.appendChild(name);
-
-    return;
-
-  }
-
-
-  /* ----------------------------------------
-     今やっている
-  ---------------------------------------- */
+  const wasCurrent = getTaskStatus(task) === "current";
+  renderTaskStatus(task, status);
 
   if (status === "current") {
-
-    task.classList.add(
-      "task-current"
-    );
-
-
-    createStatusTaskContent(
-      task,
-      taskName,
-      "●",
-      "今やってる"
-    );
-
-    return;
-
+    setFlowFromCurrent(task);
+  } else if (status === "complete" && wasCurrent) {
+    advanceFromCompletedTask(task);
+  } else if (status === "next") {
+    getAllTasks()
+      .filter((item) => item !== task && getTaskStatus(item) === "next")
+      .forEach((item) => renderTaskStatus(item, "future"));
+  } else if (status === "future" && wasCurrent) {
+    const nextIncomplete = getAllTasks().find((item) => getTaskStatus(item) !== "complete");
+    if (nextIncomplete) setFlowFromCurrent(nextIncomplete);
   }
 
+  refreshProject({ animate: true, center: true });
+  saveProjectState();
+}
 
-  /* ----------------------------------------
-     次にやる
-  ---------------------------------------- */
+function setFlowFromCurrent(currentTask) {
+  const tasks = getAllTasks();
+  const currentIndex = tasks.indexOf(currentTask);
+  tasks.forEach((task) => {
+    if (task !== currentTask && ["current", "next"].includes(getTaskStatus(task))) {
+      renderTaskStatus(task, "future");
+    }
+  });
+  renderTaskStatus(currentTask, "current");
+  const next = tasks.slice(currentIndex + 1).find((task) => getTaskStatus(task) !== "complete");
+  if (next) renderTaskStatus(next, "next");
+}
 
-  if (status === "next") {
+function advanceFromCompletedTask(completedTask) {
+  const tasks = getAllTasks();
+  const next = tasks
+    .slice(tasks.indexOf(completedTask) + 1)
+    .find((task) => getTaskStatus(task) !== "complete");
+  tasks
+    .filter((task) => ["current", "next"].includes(getTaskStatus(task)))
+    .forEach((task) => renderTaskStatus(task, "future"));
+  if (next) setFlowFromCurrent(next);
+}
 
-    task.classList.add(
-      "task-next"
-    );
+function renderTaskStatus(task, status) {
+  const name = getTaskName(task);
+  task.dataset.status = status;
+  task.classList.remove("task-complete", "task-current", "task-next");
+  task.replaceChildren();
 
-
-    createStatusTaskContent(
-      task,
-      taskName,
-      "○",
-      "次はこれ"
-    );
-
-    return;
-
+  if (status === "complete") {
+    task.classList.add("task-complete");
+    task.append(createElement("span", "task-check", "✓"), createElement("span", "task-name", name));
+  } else if (status === "current" || status === "next") {
+    const isCurrent = status === "current";
+    task.classList.add(isCurrent ? "task-current" : "task-next");
+    const text = createElement("div", "task-text");
+    text.append(createElement("span", "task-name", name), createElement("span", "task-badge", isCurrent ? "今やってる" : "次はこれ"));
+    task.append(createElement("span", "task-marker", isCurrent ? "●" : "○"), text);
+  } else {
+    task.append(createElement("span", "task-marker", "○"), createElement("span", "task-name", name));
   }
-
-
-  /* ----------------------------------------
-     未着手
-  ---------------------------------------- */
-
-  const marker =
-    document.createElement("span");
-
-  marker.className =
-    "task-marker";
-
-  marker.textContent =
-    "○";
-
-
-  const name =
-    document.createElement("span");
-
-  name.className =
-    "task-name";
-
-  name.textContent =
-    taskName;
-
-
-  task.appendChild(marker);
-
-  task.appendChild(name);
-
 }
 
-
-/* ========================================
-   現在 / 次タスクの中身
-======================================== */
-
-function createStatusTaskContent(
-  task,
-  taskName,
-  markerText,
-  badgeText
-) {
-
-  const marker =
-    document.createElement("span");
-
-  marker.className =
-    "task-marker";
-
-  marker.textContent =
-    markerText;
-
-
-  const textArea =
-    document.createElement("div");
-
-  textArea.className =
-    "task-text";
-
-
-  const name =
-    document.createElement("span");
-
-  name.className =
-    "task-name";
-
-  name.textContent =
-    taskName;
-
-
-  const badge =
-    document.createElement("span");
-
-  badge.className =
-    "task-badge";
-
-  badge.textContent =
-    badgeText;
-
-
-  textArea.appendChild(name);
-
-  textArea.appendChild(badge);
-
-
-  task.appendChild(marker);
-
-  task.appendChild(textArea);
-
+function refreshProject({ animate = true, center = false } = {}) {
+  refreshMilestoneStatuses();
+  refreshRoadmapLines(animate);
+  refreshProgressPanel();
+  if (center) requestAnimationFrame(() => centerCurrentMilestone(animate));
 }
-
-
-/* ========================================
-   マイルストーン状態を自動更新
-======================================== */
 
 function refreshMilestoneStatuses() {
-
-  const milestones =
-    document.querySelectorAll(
-      ".milestone"
-    );
-
-
-  /*
-    古い「今ここ」を消す
-  */
-
-  document
-    .querySelectorAll(
-      ".current-label"
-    )
-    .forEach((label) => {
-
-      label.remove();
-
-    });
-
-
-  milestones.forEach((milestone) => {
-
-    const tasks =
-      [...milestone.querySelectorAll(".task")];
-
-
-    if (tasks.length === 0) return;
-
-
-    const hasCurrent =
-      tasks.some((task) => {
-
-        return (
-          getTaskStatus(task) === "current"
-        );
-
-      });
-
-
-    const allComplete =
-      tasks.every((task) => {
-
-        return (
-          getTaskStatus(task) === "complete"
-        );
-
-      });
-
-
-    milestone.classList.remove(
-      "milestone-complete",
-      "milestone-current",
-      "milestone-future"
-    );
-
-
-    const statusText =
-      milestone.querySelector(
-        ".milestone-status"
-      );
-
-
-    /* ----------------------------------------
-       全タスク完了
-    ---------------------------------------- */
-
-    if (allComplete) {
-
-      milestone.dataset.status =
-        "complete";
-
-      milestone.classList.add(
-        "milestone-complete"
-      );
-
-
-      if (statusText) {
-
-        statusText.textContent =
-          "完了";
-
-      }
-
-
-      return;
-
-    }
-
-
-    /* ----------------------------------------
-       現在タスクを含む
-    ---------------------------------------- */
-
-    if (hasCurrent) {
-
-      milestone.dataset.status =
-        "current";
-
-      milestone.classList.add(
-        "milestone-current"
-      );
-
-
-      if (statusText) {
-
-        statusText.textContent =
-          "進行中";
-
-      }
-
-
-      const currentLabel =
-        document.createElement("div");
-
-      currentLabel.className =
-        "current-label";
-
-      currentLabel.textContent =
-        "今ここ";
-
-
-      const button =
-        milestone.querySelector(
-          ".milestone-button"
-        );
-
-
-      milestone.insertBefore(
-        currentLabel,
-        button
-      );
-
-
-      return;
-
-    }
-
-
-    /* ----------------------------------------
-       それ以外
-    ---------------------------------------- */
-
-    milestone.dataset.status =
-      "future";
-
-    milestone.classList.add(
-      "milestone-future"
-    );
-
-
+  document.querySelectorAll(".current-label").forEach((label) => label.remove());
+  getMilestones().forEach((milestone) => {
+    const tasks = [...milestone.querySelectorAll(".task")];
+    const allComplete = tasks.length > 0 && tasks.every((task) => getTaskStatus(task) === "complete");
+    const hasCurrent = tasks.some((task) => getTaskStatus(task) === "current");
+    const status = allComplete ? "complete" : hasCurrent ? "current" : "future";
+    milestone.dataset.status = status;
+    milestone.classList.remove("milestone-complete", "milestone-current", "milestone-future");
+    milestone.classList.add(`milestone-${status}`);
+    const statusText = milestone.querySelector(".milestone-status");
     if (statusText) {
-
-      if (
-        milestone.dataset.milestoneId
-        === "complete"
-      ) {
-
-        statusText.textContent =
-          "ゴール";
-
-      } else {
-
-        statusText.textContent =
-          "未着手";
-
-      }
-
+      statusText.textContent = status === "complete" ? "完了" : status === "current" ? "進行中" : milestone.dataset.milestoneId === "complete" ? "ゴール" : "未着手";
     }
-
+    if (status === "current") {
+      milestone.insertBefore(createElement("div", "current-label", "今ここ"), milestone.querySelector(".milestone-button"));
+      const branch = milestone.querySelector(".task-branch");
+      const button = milestone.querySelector(".milestone-button");
+      if (branch && button) {
+        branch.hidden = false;
+        branch.classList.add("is-open");
+        button.setAttribute("aria-expanded", "true");
+      }
+    }
   });
-
 }
 
-
-/* ========================================
-   プロジェクト進捗更新
-======================================== */
-
-function refreshProjectProgress() {
-
-  updateProgressPercent();
-
-  updateCurrentMilestone();
-
-  updateCurrentTask();
-
-  updateNextTask();
-
+function refreshRoadmapLines(animate) {
+  const milestones = getMilestones();
+  let pathIsComplete = true;
+  document.querySelectorAll(".roadmap-line").forEach((line, index) => {
+    const complete = pathIsComplete && milestones[index]?.dataset.status === "complete";
+    pathIsComplete = complete;
+    const wasComplete = line.classList.contains("is-complete");
+    line.classList.remove("roadmap-line-complete", "roadmap-line-future", "is-advancing", "is-retreating");
+    line.classList.toggle("is-complete", complete);
+    line.classList.add(complete ? "roadmap-line-complete" : "roadmap-line-future");
+    if (animate && complete !== wasComplete) line.classList.add(complete ? "is-advancing" : "is-retreating");
+  });
 }
 
+function refreshProgressPanel() {
+  const tasks = getAllTasks();
+  const currentTask = tasks.find((task) => getTaskStatus(task) === "current");
+  const nextTask = tasks.find((task) => getTaskStatus(task) === "next");
+  const currentMilestone = document.querySelector('.milestone[data-status="current"]') || getMilestones().find((item) => item.dataset.status !== "complete");
+  const completed = tasks.filter((task) => getTaskStatus(task) === "complete").length;
+  const percent = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
+  setText("#progress-percent", `${percent}%`);
+  setText(".current-task-box strong", currentTask ? getTaskName(currentTask) : "現在のタスクはありません");
+  setText(".next-task-box strong", nextTask ? getTaskName(nextTask) : "次のタスクはありません");
+  setText(".current-milestone strong", currentMilestone?.querySelector(".milestone-name")?.textContent.trim() || "完了");
+  document.querySelector(".progress-bar")?.setAttribute("aria-valuenow", String(percent));
+  const fill = document.querySelector(".progress-bar-fill");
+  if (fill) fill.style.width = `${percent}%`;
+  const panelIcon = document.querySelector(".current-milestone-icon");
+  const sourceIcon = currentMilestone?.querySelector(".milestone-icon");
+  if (panelIcon && sourceIcon) panelIcon.innerHTML = sourceIcon.innerHTML;
+}
 
-/* ========================================
-   全体進捗率
-======================================== */
+function openAddTaskDialog(milestone) {
+  if (!milestone) return;
+  const input = createTextInput("追加するタスク名");
+  const content = createFormContent(input, "タスクを追加", () => {
+    const name = input.value.trim();
+    if (!name) return showInputError(input, "タスク名を入力してくれ。");
+    milestone.querySelector(".task-list")?.appendChild(createTask(name));
+    closeDialog();
+    refreshProject({ animate: false, center: true });
+    saveProjectState();
+  });
+  openDialog({ label: "ADD TASK", title: "タスクを追加", content, focus: input });
+}
 
-function updateProgressPercent() {
+function openAddMilestoneDialog() {
+  const nameInput = createTextInput("マイルストーン名");
+  const taskInput = createTextInput("最初のタスク名");
+  const picker = createIconPicker();
+  const fields = createElement("div", "dialog-fields");
+  fields.append(nameInput, taskInput, picker.element);
+  const content = createFormContent(fields, "マイルストーンを追加", () => {
+    const name = nameInput.value.trim();
+    const firstTask = taskInput.value.trim();
+    if (!name) return showInputError(nameInput, "マイルストーン名を入力してくれ。");
+    if (!firstTask) return showInputError(taskInput, "最初のタスク名を入力してくれ。");
+    appendMilestone({ name, firstTask, iconKey: picker.getValue() });
+    closeDialog();
+    refreshProject({ animate: false });
+    saveProjectState();
+  });
+  openDialog({ label: "ADD MILESTONE", title: "マイルストーンを追加", content, focus: nameInput });
+}
 
-  const tasks =
-    [...document.querySelectorAll(".task")];
-
-
-  if (tasks.length === 0) {
-
-    setProgressDisplay(0);
-
-    return;
-
+function appendMilestone({ name, firstTask, iconKey }) {
+  const roadmap = document.getElementById("roadmap");
+  const goal = getMilestones().find((item) => item.dataset.milestoneId === "complete");
+  const milestone = createMilestone({ id: `milestone-${Date.now()}`, name, iconKey, tasks: [{ name: firstTask, status: "future" }] });
+  const line = createElement("div", "roadmap-line roadmap-line-future");
+  line.setAttribute("aria-hidden", "true");
+  if (goal) {
+    roadmap.insertBefore(milestone, goal);
+    roadmap.insertBefore(line, goal);
+  } else {
+    if (getMilestones().length) roadmap.appendChild(line);
+    roadmap.appendChild(milestone);
   }
+  requestAnimationFrame(() => centerMilestone(milestone));
+}
 
+function createMilestone({ id, name, iconKey, iconHtml, tasks, expanded = false }) {
+  const milestone = createElement("article", "milestone milestone-future");
+  milestone.dataset.milestoneId = id;
+  milestone.dataset.status = "future";
+  milestone.dataset.iconKey = iconKey || "";
+  const button = createElement("button", "milestone-button");
+  button.type = "button";
+  button.setAttribute("aria-expanded", String(expanded));
+  button.innerHTML = `<span class="milestone-icon">${iconKey ? MILESTONE_ICONS[iconKey] : iconHtml || "🧭"}</span><span class="milestone-name"></span><span class="milestone-status">未着手</span>`;
+  button.querySelector(".milestone-name").textContent = name;
+  const branch = createElement("div", expanded ? "task-branch is-open" : "task-branch");
+  branch.hidden = !expanded;
+  const list = createElement("div", "task-list");
+  tasks.forEach((task) => list.appendChild(createTask(task.name, task.status)));
+  const addButton = createElement("button", "add-task-button", "＋ タスクを追加");
+  addButton.type = "button";
+  branch.append(list, addButton);
+  milestone.append(button, branch);
+  return milestone;
+}
 
-  const completedTasks =
-    tasks.filter((task) => {
+function createTask(name, status = "future") {
+  const task = createElement("div", "task");
+  task.dataset.status = status;
+  task.appendChild(createElement("span", "task-name", name));
+  renderTaskStatus(task, status);
+  return task;
+}
 
-      return (
-        getTaskStatus(task)
-        === "complete"
-      );
+function openDialog({ label, title, content, focus }) {
+  closeDialog(true);
+  const overlay = createElement("div", "task-status-overlay");
+  const dialog = createElement("div", "task-status-dialog");
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.append(createElement("p", "task-status-dialog-label", label), createElement("h3", "", title), content);
+  const cancel = createElement("button", "task-status-cancel", "キャンセル");
+  cancel.type = "button";
+  cancel.addEventListener("click", () => closeDialog());
+  dialog.appendChild(cancel);
+  overlay.appendChild(dialog);
+  overlay.addEventListener("click", (event) => { if (event.target === overlay) closeDialog(); });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.classList.add("is-visible"); focus?.focus(); });
+}
 
+function closeDialog(immediate = false) {
+  const overlay = document.querySelector(".task-status-overlay");
+  if (!overlay) return;
+  overlay.classList.remove("is-visible");
+  if (immediate) overlay.remove(); else setTimeout(() => overlay.remove(), 200);
+}
+
+function createFormContent(field, label, onSubmit) {
+  const form = createElement("form", "dialog-form");
+  form.appendChild(field);
+  const submit = createElement("button", "dialog-submit", label);
+  submit.type = "submit";
+  form.appendChild(submit);
+  form.addEventListener("submit", (event) => { event.preventDefault(); onSubmit(); });
+  return form;
+}
+
+function createTextInput(placeholder) {
+  const input = createElement("input", "dialog-input");
+  input.type = "text";
+  input.placeholder = placeholder;
+  input.maxLength = 40;
+  return input;
+}
+
+function createIconPicker() {
+  const element = createElement("fieldset", "icon-picker");
+  element.appendChild(createElement("legend", "", "アイコンを選ぶ"));
+  Object.entries(MILESTONE_ICONS).forEach(([key, svg], index) => {
+    const label = createElement("label", "icon-choice");
+    const input = createElement("input");
+    input.type = "radio";
+    input.name = "milestone-icon";
+    input.value = key;
+    input.checked = index === 0;
+    const preview = createElement("span", "icon-choice-preview");
+    preview.innerHTML = svg;
+    label.append(input, preview);
+    element.appendChild(label);
+  });
+  return { element, getValue: () => element.querySelector('input:checked')?.value || "compass" };
+}
+
+function showInputError(input, message) {
+  input.setCustomValidity(message);
+  input.reportValidity();
+  input.addEventListener("input", () => input.setCustomValidity(""), { once: true });
+}
+
+function saveProjectState() {
+  const state = getMilestones().map((milestone) => ({
+    id: milestone.dataset.milestoneId,
+    name: milestone.querySelector(".milestone-name")?.textContent.trim() || "マイルストーン",
+    iconKey: milestone.dataset.iconKey || "",
+    iconHtml: milestone.querySelector(".milestone-icon")?.innerHTML || "🧭",
+    expanded: milestone.querySelector(".milestone-button")?.getAttribute("aria-expanded") === "true",
+    tasks: [...milestone.querySelectorAll(".task")].map((task) => ({ name: getTaskName(task), status: getTaskStatus(task) }))
+  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function restoreProjectState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return;
+  try {
+    const state = JSON.parse(saved);
+    if (!Array.isArray(state) || !state.length) return;
+    const roadmap = document.getElementById("roadmap");
+    roadmap.replaceChildren();
+    state.forEach((item, index) => {
+      if (index) {
+        const line = createElement("div", "roadmap-line roadmap-line-future");
+        line.setAttribute("aria-hidden", "true");
+        roadmap.appendChild(line);
+      }
+      roadmap.appendChild(createMilestone(item));
     });
-
-
-  const percent =
-    Math.round(
-      (
-        completedTasks.length /
-        tasks.length
-      ) * 100
-    );
-
-
-  setProgressDisplay(percent);
-
+  } catch (error) {
+    console.warn("保存したプロジェクト状態を読み込めませんでした。", error);
+  }
 }
 
-
-/* ========================================
-   進捗表示変更
-======================================== */
-
-function setProgressDisplay(percent) {
-
-  const percentText =
-    document.getElementById(
-      "progress-percent"
-    );
-
-  const progressBar =
-    document.querySelector(
-      ".progress-bar"
-    );
-
-  const progressFill =
-    document.querySelector(
-      ".progress-bar-fill"
-    );
-
-
-  if (percentText) {
-
-    percentText.textContent =
-      `${percent}%`;
-
-  }
-
-
-  if (progressBar) {
-
-    progressBar.setAttribute(
-      "aria-valuenow",
-      percent
-    );
-
-  }
-
-
-  if (progressFill) {
-
-    progressFill.style.width =
-      `${percent}%`;
-
-  }
-
-}
-
-
-/* ========================================
-   現在のマイルストーン
-======================================== */
-
-function updateCurrentMilestone() {
-
-  let currentMilestone =
-    document.querySelector(
-      '.milestone[data-status="current"]'
-    );
-
-
-  /*
-    現在タスクが無い場合
-    最初の未完了マイルストーン
-  */
-
-  if (!currentMilestone) {
-
-    currentMilestone =
-      [...document.querySelectorAll(
-        ".milestone"
-      )]
-      .find((milestone) => {
-
-        return (
-          milestone.dataset.status
-          !== "complete"
-        );
-
-      });
-
-  }
-
-
-  if (!currentMilestone) return;
-
-
-  const milestoneName =
-    currentMilestone.querySelector(
-      ".milestone-name"
-    );
-
-
-  const panelName =
-    document.querySelector(
-      ".current-milestone strong"
-    );
-
-
-  if (
-    milestoneName &&
-    panelName
-  ) {
-
-    panelName.textContent =
-      milestoneName
-        .textContent
-        .trim();
-
-  }
-
-}
-
-
-/* ========================================
-   今やっているタスク
-======================================== */
-
-function updateCurrentTask() {
-
-  const currentTask =
-    [...document.querySelectorAll(".task")]
-      .find((task) => {
-
-        return (
-          getTaskStatus(task)
-          === "current"
-        );
-
-      });
-
-
-  const panelText =
-    document.querySelector(
-      ".current-task-box strong"
-    );
-
-
-  if (!panelText) return;
-
-
-  if (!currentTask) {
-
-    panelText.textContent =
-      "現在のタスクはありません";
-
-    return;
-
-  }
-
-
-  const taskName =
-    currentTask.querySelector(
-      ".task-name"
-    );
-
-
-  if (taskName) {
-
-    panelText.textContent =
-      taskName
-        .textContent
-        .trim();
-
-  }
-
-}
-
-
-/* ========================================
-   次にやるタスク
-======================================== */
-
-function updateNextTask() {
-
-  let nextTask =
-    [...document.querySelectorAll(".task")]
-      .find((task) => {
-
-        return (
-          getTaskStatus(task)
-          === "next"
-        );
-
-      });
-
-
-  /*
-    next指定がない場合
-    最初の未着手を表示
-  */
-
-  if (!nextTask) {
-
-    nextTask =
-      [...document.querySelectorAll(".task")]
-        .find((task) => {
-
-          return (
-            getTaskStatus(task)
-            === "future"
-          );
-
-        });
-
-  }
-
-
-  const panelText =
-    document.querySelector(
-      ".next-task-box strong"
-    );
-
-
-  if (!panelText) return;
-
-
-  if (!nextTask) {
-
-    panelText.textContent =
-      "次のタスクはありません";
-
-    return;
-
-  }
-
-
-  const taskName =
-    nextTask.querySelector(
-      ".task-name"
-    );
-
-
-  if (taskName) {
-
-    panelText.textContent =
-      taskName
-        .textContent
-        .trim();
-
-  }
-
-}
-
-
-/* ========================================
-   タスク状態取得
-======================================== */
-
+function normalizeTaskStatuses() { getAllTasks().forEach((task) => renderTaskStatus(task, getTaskStatus(task))); }
+function getMilestones() { return [...document.querySelectorAll(".milestone")]; }
+function getAllTasks() { return [...document.querySelectorAll(".task")]; }
+function getTaskName(task) { return task.querySelector(".task-name")?.textContent.trim() || "タスク"; }
 function getTaskStatus(task) {
-
-  if (task.dataset.status) {
-
-    return task.dataset.status;
-
-  }
-
-
-  if (
-    task.classList.contains(
-      "task-complete"
-    )
-  ) {
-
-    return "complete";
-
-  }
-
-
-  if (
-    task.classList.contains(
-      "task-current"
-    )
-  ) {
-
-    return "current";
-
-  }
-
-
-  if (
-    task.classList.contains(
-      "task-next"
-    )
-  ) {
-
-    return "next";
-
-  }
-
-
+  if (task.dataset.status) return task.dataset.status;
+  if (task.classList.contains("task-complete")) return "complete";
+  if (task.classList.contains("task-current")) return "current";
+  if (task.classList.contains("task-next")) return "next";
   return "future";
-
 }
+function createElement(tag, className = "", text = "") {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text) element.textContent = text;
+  return element;
+}
+function setText(selector, text) { const element = document.querySelector(selector); if (element) element.textContent = text; }
 
+window.refreshProjectProgress = () => refreshProject({ animate: true, center: true });
 
-/* ========================================
-   外部から再計算可能
-======================================== */
-
-window.refreshProjectProgress =
-  refreshProjectProgress;
