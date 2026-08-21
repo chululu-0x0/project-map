@@ -1,4 +1,4 @@
-const STORAGE_KEY = "project-map-state-v4";
+const STORAGE_KEY = "project-map-state-v5";
 
 let selectedMilestone = null;
 
