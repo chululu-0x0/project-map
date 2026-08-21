@@ -1371,181 +1371,6 @@ strong {
 }
 
 /* ========================================
-   タスク枝分かれ
-   ツリーライン改善版
-======================================== */
-
-/*
-  タスクカードの左側に
-  「縦の幹」を置くスペースを確保
-*/
-.task-branch {
-  width: 195px;
-}
-
-
-/* タスク一覧 */
-.task-list {
-  position: relative;
-
-  padding-left: 22px;
-}
-
-
-/* ========================================
-   マイルストーン
-        ↓
-   枝の幹まで伸びる縦線
-======================================== */
-
-.task-branch::before {
-  content: "";
-
-  position: absolute;
-
-  top: 0;
-  left: 50%;
-
-  width: 2px;
-  height: 43px;
-
-  transform: translateX(-50%);
-
-  border-radius: 999px;
-
-  background: var(--gray-line);
-}
-
-
-/* ========================================
-   マイルストーン中央
-       ↓
-       └──── 幹
-
-   の横部分
-======================================== */
-
-.task-branch::after {
-  content: "";
-
-  position: absolute;
-
-  top: 42px;
-  left: 8px;
-
-  width: calc(50% - 8px);
-  height: 2px;
-
-  border-radius: 999px;
-
-  background: var(--gray-line);
-}
-
-
-/* ========================================
-   タスク一覧の縦の幹
-======================================== */
-
-.task-list::before {
-  content: "";
-
-  position: absolute;
-
-  left: 8px;
-
-  /*
-    最初のタスク中央から
-    最後のタスク中央まで
-  */
-  top: 23px;
-  bottom: 23px;
-
-  width: 2px;
-
-  border-radius: 999px;
-
-  background: var(--gray-line);
-}
-
-
-/* ========================================
-   幹 → 各タスク
-======================================== */
-
-.task::before {
-  content: "";
-
-  position: absolute;
-
-  left: -14px;
-  top: 50%;
-
-  width: 14px;
-  height: 2px;
-
-  transform: translateY(-50%);
-
-  border: 0;
-
-  border-radius: 999px;
-
-  background: var(--gray-line);
-}
-
-
-/* ========================================
-   完了したタスクの枝
-======================================== */
-
-.task-complete::before {
-  background: var(--pink);
-}
-
-
-/* ========================================
-   今やっているタスクの枝
-======================================== */
-
-.task-current::before {
-  background: var(--mint);
-}
-
-
-/* ========================================
-   次にやるタスクの枝
-======================================== */
-
-.task-next::before {
-  background: var(--yellow);
-}
-
-
-/* ========================================
-   完了済み・現在マイルストーンから
-   最初の枝へ向かう線
-======================================== */
-
-.milestone-complete .task-branch::before,
-.milestone-complete .task-branch::after,
-.milestone-current .task-branch::before,
-.milestone-current .task-branch::after {
-  background: var(--pink);
-}
-
-
-/* ========================================
-   iPhone
-======================================== */
-
-@media (max-width: 520px) {
-
-  .task-branch {
-    width: 175px;
-  }
-
-}
-
-/* ========================================
    タスク接続線
    シンプル縦型ステッパー
 ======================================== */
@@ -2024,4 +1849,675 @@ strong {
       1fr;
   }
 
+}
+
+/* ========================================
+   自動進行・中央配置・追加画面
+======================================== */
+
+.roadmap {
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+}
+
+.roadmap::before,
+.roadmap::after {
+  content: "";
+  flex: 0 0 calc(50% - 90px);
+}
+
+.milestone {
+  scroll-snap-align: center;
+}
+
+.roadmap-line::before,
+.roadmap-line-complete::before,
+.roadmap-line-future::before {
+  border-top: 3px dashed var(--gray);
+}
+
+.roadmap-line::after {
+  content: "";
+  position: absolute;
+  top: 64px;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--pink);
+  box-shadow: 0 0 10px rgba(242, 154, 178, 0.32);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.roadmap.is-ready .roadmap-line::after {
+  transition: transform 0.72s cubic-bezier(0.2, 1.45, 0.45, 1);
+}
+
+.roadmap-line.is-complete::after {
+  transform: scaleX(1);
+}
+
+.roadmap-line.is-advancing::after,
+.roadmap-line.is-retreating::after {
+  box-shadow: 0 0 16px rgba(242, 154, 178, 0.55);
+}
+
+.milestone-icon svg,
+.current-milestone-icon svg,
+.icon-choice-preview svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dialog-form,
+.dialog-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dialog-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 13px;
+  border: 1px solid var(--gray-line);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--text-main);
+  font: inherit;
+  outline: none;
+}
+
+.dialog-input:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 4px rgba(242, 154, 178, 0.12);
+}
+
+.dialog-submit {
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--pink);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.icon-picker legend {
+  grid-column: 1 / -1;
+  margin-bottom: 7px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.icon-choice {
+  position: relative;
+  cursor: pointer;
+}
+
+.icon-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.icon-choice-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  border: 1px solid var(--gray-line);
+  border-radius: 14px;
+  background: var(--gray-light);
+  color: var(--text-soft);
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.icon-choice input:checked + .icon-choice-preview {
+  border: 2px solid var(--pink);
+  background: var(--pink-light);
+  color: var(--pink-dark);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap,
+  .roadmap-line::after {
+    scroll-behavior: auto;
+    transition: none !important;
+  }
+}
+
+Exception: 
+Line |
+   2 |  … ョン';$i=$s.IndexOf($m)}; if($i -lt 0){throw 'marker not found'}; $s.Su …
+     |                                         ~~~~~~~~~~~~~~~~~~~~~~~~
+     | marker not found
+
+/* ========================================
+   2026-08
+   ロードマップ操作UI調整
+
+   ・タスク常時展開
+   ・左右ナビをマイルストーン横へ
+   ・編集はアイコンクリック
+   ・順番によるアイコン色
+   ・ぽよん演出強化
+======================================== */
+
+
+/* ========================================
+   ▼ タスクは常時展開
+======================================== */
+
+.task-branch,
+.task-branch.is-open {
+
+  max-height: none;
+
+  margin-top: 24px;
+
+  padding-top: 20px;
+
+  opacity: 1;
+
+  transform: none;
+
+  overflow: visible;
+
+  pointer-events: auto;
+}
+
+
+/* タスクも常に表示 */
+.task-branch .task,
+.task-branch.is-open .task {
+
+  opacity: 1;
+
+  transform: none;
+
+  transition-delay: 0s;
+}
+
+
+/* ========================================
+   ▼ 以前の開閉マークを非表示
+
+   マイルストーン右下にあった
+   「⌄」は不要になる。
+======================================== */
+
+.milestone-button::after {
+
+  display: none;
+}
+
+
+/* ========================================
+   ▼ マイルストーンアイコン
+
+   少し大きくして、
+   編集できることが分かりやすい状態へ。
+======================================== */
+
+.milestone-icon {
+
+  width: 56px;
+
+  height: 56px;
+
+  margin-bottom: 10px;
+
+  border-radius: 18px;
+
+  background:
+    var(
+      --milestone-order-soft,
+      var(--pink-light)
+    );
+
+  color:
+    var(
+      --milestone-order-color,
+      var(--pink)
+    );
+
+  font-size: 29px;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.2s ease;
+}
+
+
+/* SVGアイコンも少し大きく */
+.milestone-icon svg {
+
+  width: 33px;
+
+  height: 33px;
+}
+
+
+/* PCでアイコンにカーソルを乗せたとき */
+@media (hover: hover) {
+
+  .milestone-icon:hover {
+
+    transform:
+      scale(1.08);
+
+    box-shadow:
+      0 5px 14px
+      rgba(74, 72, 82, 0.09);
+  }
+}
+
+
+/* アイコンを押した瞬間 */
+.milestone-icon:active {
+
+  transform:
+    scale(0.88);
+}
+
+
+/* ========================================
+   ▼ 状態に関係なく
+      アイコン色は「順位」を優先
+
+   以前は
+   完了・現在・未来によって背景色が
+   決まっていたため、それを上書きする。
+======================================== */
+
+.milestone-complete .milestone-icon,
+.milestone-current .milestone-icon,
+.milestone-future .milestone-icon {
+
+  background:
+    var(
+      --milestone-order-soft,
+      var(--pink-light)
+    );
+
+  color:
+    var(
+      --milestone-order-color,
+      var(--pink)
+    );
+
+  opacity: 1;
+}
+
+
+/* ========================================
+   ▼ 左右移動ナビゲーション
+
+   マイルストーンの下ではなく、
+   カードを左右から挟む位置へ。
+======================================== */
+
+.milestone-navigation {
+
+  position: absolute;
+
+  top: 45px;
+
+  left: 0;
+
+  right: 0;
+
+  z-index: 5;
+
+  height: 44px;
+
+  pointer-events: none;
+}
+
+
+/* 左右共通 */
+.milestone-nav-button {
+
+  position: absolute;
+
+  top: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 42px;
+
+  height: 42px;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color:
+    var(
+      --milestone-order-color,
+      var(--pink)
+    );
+
+  font-size: 29px;
+
+  line-height: 1;
+
+  cursor: pointer;
+
+  pointer-events: auto;
+
+  user-select: none;
+
+  -webkit-tap-highlight-color:
+    transparent;
+
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease,
+    filter 0.18s ease;
+}
+
+
+/* 左側 */
+.milestone-nav-left {
+
+  left: -8px;
+}
+
+
+/* 右側 */
+.milestone-nav-right {
+
+  right: -8px;
+}
+
+
+/* 一番端で押せない矢印 */
+.milestone-nav-button:disabled {
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+
+/* PCのホバー */
+@media (hover: hover) {
+
+  .milestone-nav-button:not(:disabled):hover {
+
+    transform:
+      scale(1.12);
+
+    filter:
+      brightness(0.98);
+  }
+}
+
+
+/* ========================================
+   ▼ 矢印ぽよん
+======================================== */
+
+.milestone-nav-button.is-nav-popping {
+
+  animation:
+    milestone-nav-pop
+    0.42s
+    cubic-bezier(
+      0.2,
+      1.5,
+      0.4,
+      1
+    );
+}
+
+
+@keyframes milestone-nav-pop {
+
+  0% {
+
+    transform:
+      scale(1);
+  }
+
+  18% {
+
+    transform:
+      scale(0.72);
+  }
+
+  48% {
+
+    transform:
+      scale(1.28);
+  }
+
+  70% {
+
+    transform:
+      scale(0.92);
+  }
+
+  86% {
+
+    transform:
+      scale(1.10);
+  }
+
+  100% {
+
+    transform:
+      scale(1);
+  }
+}
+
+
+/* ========================================
+   ▼ 選択中マイルストーン
+
+   本体をクリックしたときに
+   「今これを選んでいる」と分かるように
+   少しだけ浮かせる。
+======================================== */
+
+.milestone.is-selected
+.milestone-button {
+
+  transform:
+    translateY(-3px);
+
+  box-shadow:
+    0 8px 22px
+    rgba(74, 72, 82, 0.09);
+}
+
+
+/* ========================================
+   ▼ タスク並び替え
+
+   接続線は task::after で描かれているため、
+   transformでカードを動かすと
+   線まで一緒についてきてしまう。
+
+   ドラッグ中だけ線を非表示にして、
+   移動完了後に新しい位置で復活させる。
+======================================== */
+
+.task.is-dragging::after {
+
+  opacity: 0;
+}
+
+
+/* ========================================
+   ▼ タスク状態変更
+   最初にきゅっと縮む
+======================================== */
+
+.task.is-state-changing {
+
+  transform:
+    scale(0.84);
+
+  transition:
+    transform
+    0.13s
+    ease-in;
+}
+
+
+/* ========================================
+   ▼ 状態変更後の強めぽよん
+======================================== */
+
+.task.is-state-changed {
+
+  animation:
+    task-status-strong-pop
+    0.60s
+    cubic-bezier(
+      0.18,
+      1.35,
+      0.35,
+      1
+    );
+}
+
+
+@keyframes task-status-strong-pop {
+
+  /* 状態変更直後 */
+  0% {
+
+    transform:
+      scale(0.84);
+  }
+
+
+  /* 一度かなり大きく */
+  30% {
+
+    transform:
+      scale(1.13);
+  }
+
+
+  /* 少し縮む */
+  53% {
+
+    transform:
+      scale(0.93);
+  }
+
+
+  /* もう一度膨らむ */
+  73% {
+
+    transform:
+      scale(1.07);
+  }
+
+
+  /* 少しだけ戻る */
+  87% {
+
+    transform:
+      scale(0.98);
+  }
+
+
+  /* 通常サイズ */
+  100% {
+
+    transform:
+      scale(1);
+  }
+}
+
+
+/* ========================================
+   ▼ 小さい画面
+
+   iPhoneでもアイコンと矢印を
+   見失わない程度のサイズにする。
+======================================== */
+
+@media (max-width: 520px) {
+
+  .milestone-icon {
+
+    width: 50px;
+
+    height: 50px;
+
+    border-radius: 16px;
+
+    font-size: 26px;
+  }
+
+
+  .milestone-icon svg {
+
+    width: 30px;
+
+    height: 30px;
+  }
+
+
+  .milestone-navigation {
+
+    top: 38px;
+  }
+
+
+  .milestone-nav-button {
+
+    width: 38px;
+
+    height: 38px;
+
+    font-size: 26px;
+  }
+
+
+  .milestone-nav-left {
+
+    left: -8px;
+  }
+
+
+  .milestone-nav-right {
+
+    right: -8px;
+  }
 }
