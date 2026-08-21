@@ -1,6 +1,17 @@
 const STORAGE_KEY = "project-map-state-v4";
+
 let selectedMilestone = null;
+
+// ========================================
+// ▼ 誤クリック防止用
+//
+// タスク並び替え直後や、
+// PCでロードマップをドラッグした直後に
+// 編集画面が誤って開かないようにする。
+// ========================================
+
 let suppressTaskClickUntil = 0;
+let suppressRoadmapClickUntil = 0;
 
 // ========================================
 // ▼ マイルストーンの順番ごとの色
@@ -46,136 +57,249 @@ const MILESTONE_ICONS = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+
   restoreProjectState();
+
   normalizeTaskStatuses();
+
   ensureMilestoneControls();
+
   setupRoadmapControls();
+
+  // タスクの長押し上下移動
   setupTaskReordering();
-  refreshProject({ animate: false, center: true });
-  requestAnimationFrame(() => document.getElementById("roadmap")?.classList.add("is-ready"));
-  window.addEventListener("resize", () => centerCurrentMilestone(false));
+
+  // ========================================
+  // ▼ PC用
+  // マウスでロードマップを掴んで
+  // 左右へスライドできるようにする
+  // ========================================
+  setupRoadmapDragging();
+
+  refreshProject({
+    animate: false,
+    center: true
+  });
+
+  requestAnimationFrame(() => {
+    document
+      .getElementById("roadmap")
+      ?.classList.add("is-ready");
+  });
+
+  window.addEventListener(
+    "resize",
+    () => centerCurrentMilestone(false)
+  );
 });
 
 // ========================================
 // ▼ ロードマップ内のクリック操作
 //
-// ・アイコンを押す
-//      → マイルストーン編集
+// 【基本ルール】
 //
-// ・アイコン以外のマイルストーンを押す
-//      → そのマイルストーンを選択し、中央へ移動
+// 中央にないマイルストーン
+//   → 1回目は中央へ移動するだけ
 //
-// ・左右の三角を押す
-//      → 前後のマイルストーンへ移動
+// 中央にあるマイルストーン
+//   → クリックで編集画面
 //
-// ・タスクを押す
-//      → タスク編集
+// 中央にないマイルストーンのタスク
+//   → 1回目は親マイルストーンを中央へ
+//
+// 中央にあるマイルストーンのタスク
+//   → クリックでタスク編集
+//
+// 「何かを変更する前に、まず中央へ」
+// というルールで統一する。
 // ========================================
 
 function setupRoadmapControls() {
-  const roadmap = document.getElementById("roadmap");
 
-  roadmap?.addEventListener("click", (event) => {
+  const roadmap =
+    document.getElementById("roadmap");
 
-    const navigationButton =
-      event.target.closest(".milestone-nav-button");
+  roadmap?.addEventListener(
+    "click",
+    (event) => {
 
-    const milestoneIcon =
-      event.target.closest(".milestone-icon");
-
-    const milestoneButton =
-      event.target.closest(".milestone-button");
-
-    const task =
-      event.target.closest(".task");
-
-    const addTaskButton =
-      event.target.closest(".add-task-button");
-
-
-    // ----------------------------------------
-    // 左右移動ボタン
-    // ----------------------------------------
-    if (navigationButton) {
-
-      animateNavigationButton(navigationButton);
-
-      navigateMilestone(
-        Number(navigationButton.dataset.direction)
-      );
-
-      return;
-    }
-
-
-    // ----------------------------------------
-    // マイルストーンのアイコン
-    // → 編集画面を開く
-    // ----------------------------------------
-    if (milestoneIcon) {
-
-      const milestone =
-        milestoneIcon.closest(".milestone");
-
-      selectMilestone(
-        milestone,
-        false
-      );
-
-      openMilestoneEditDialog(milestone);
-
-      return;
-    }
-
-
-    // ----------------------------------------
-    // マイルストーン本体
-    // → 選択して中央へ
-    //
-    // 編集画面は開かない
-    // ----------------------------------------
-    if (milestoneButton) {
-
-      const milestone =
-        milestoneButton.closest(".milestone");
-
-      selectMilestone(milestone);
-
-      return;
-    }
-
-
-    // ----------------------------------------
-    // タスク
-    // ----------------------------------------
-    if (task) {
-
-      // 並び替え直後の誤クリック防止
-      if (Date.now() < suppressTaskClickUntil) {
+      // PCドラッグ直後のクリックなら無視
+      if (
+        Date.now() <
+        suppressRoadmapClickUntil
+      ) {
         return;
       }
 
-      openTaskStatusDialog(task);
 
-      return;
+      const task =
+        event.target.closest(".task");
+
+      const addTaskButton =
+        event.target.closest(
+          ".add-task-button"
+        );
+
+      const milestoneButton =
+        event.target.closest(
+          ".milestone-button"
+        );
+
+
+      // ========================================
+      // ▼ タスク
+      // ========================================
+
+      if (task) {
+
+        // 長押し並び替え直後の
+        // 誤クリックを防ぐ
+        if (
+          Date.now() <
+          suppressTaskClickUntil
+        ) {
+          return;
+        }
+
+
+        const milestone =
+          task.closest(".milestone");
+
+
+        // ----------------------------------------
+        // まだ中央ではない
+        // → 編集せず中央へ移動
+        // ----------------------------------------
+
+        if (
+          !isMilestoneCentered(milestone)
+        ) {
+
+          selectMilestone(
+            milestone,
+            true
+          );
+
+          return;
+        }
+
+
+        // ----------------------------------------
+        // すでに中央
+        // → 選択状態も合わせてから編集
+        // ----------------------------------------
+
+        selectMilestone(
+          milestone,
+          false
+        );
+
+        openTaskStatusDialog(task);
+
+        return;
+      }
+
+
+      // ========================================
+      // ▼ タスク追加
+      //
+      // これも「変更操作」なので
+      // 中央にあるときだけ開く
+      // ========================================
+
+      if (addTaskButton) {
+
+        const milestone =
+          addTaskButton.closest(
+            ".milestone"
+          );
+
+
+        if (
+          !isMilestoneCentered(milestone)
+        ) {
+
+          selectMilestone(
+            milestone,
+            true
+          );
+
+          return;
+        }
+
+
+        selectMilestone(
+          milestone,
+          false
+        );
+
+        openAddTaskDialog(milestone);
+
+        return;
+      }
+
+
+      // ========================================
+      // ▼ マイルストーン
+      // ========================================
+
+      if (milestoneButton) {
+
+        const milestone =
+          milestoneButton.closest(
+            ".milestone"
+          );
+
+
+        // ----------------------------------------
+        // 中央にいない
+        // → まず中央へ
+        // ----------------------------------------
+
+        if (
+          !isMilestoneCentered(milestone)
+        ) {
+
+          selectMilestone(
+            milestone,
+            true
+          );
+
+          return;
+        }
+
+
+        // ----------------------------------------
+        // すでに中央
+        // → 2回目の操作として編集
+        // ----------------------------------------
+
+        selectMilestone(
+          milestone,
+          false
+        );
+
+        openMilestoneEditDialog(
+          milestone
+        );
+
+        return;
+      }
     }
+  );
 
 
-    // ----------------------------------------
-    // タスク追加
-    // ----------------------------------------
-    if (addTaskButton) {
+  // ========================================
+  // ▼ マイルストーン追加
+  //
+  // これはロードマップ全体の追加機能なので
+  // 中央判定の対象外。
+  // ========================================
 
-      openAddTaskDialog(
-        addTaskButton.closest(".milestone")
-      );
-    }
-  });
-
-
-  // マイルストーン追加
   document
-    .getElementById("add-milestone-button")
+    .getElementById(
+      "add-milestone-button"
+    )
     ?.addEventListener(
       "click",
       openAddMilestoneDialog
@@ -217,141 +341,123 @@ function centerCurrentMilestone(smooth = true) {
 }
 
 // ========================================
-// ▼ マイルストーン用の補助UIを準備
+// ▼ マイルストーンの補助UI準備
 //
-// 今回からタスクは常時展開。
-// そのため「開閉ボタン」は作らない。
+// ・タスクは常時展開
+// ・開閉ボタンは廃止
+// ・左右矢印も廃止
+// ・アイコン単独編集も廃止
 //
-// 左右移動ボタンだけを追加する。
+// マイルストーン本体を
+// 一つの操作領域として扱う。
 // ========================================
 
-function ensureMilestoneControls(root = document) {
+function ensureMilestoneControls(
+  root = document
+) {
 
   const milestones =
     root.matches?.(".milestone")
       ? [root]
-      : [...root.querySelectorAll(".milestone")];
+      : [
+          ...root.querySelectorAll(
+            ".milestone"
+          )
+        ];
 
 
-  milestones.forEach((milestone) => {
+  milestones.forEach(
+    (milestone) => {
 
-    const milestoneButton =
-      milestone.querySelector(".milestone-button");
+      const milestoneButton =
+        milestone.querySelector(
+          ".milestone-button"
+        );
 
-    const branch =
-      milestone.querySelector(".task-branch");
+      const branch =
+        milestone.querySelector(
+          ".task-branch"
+        );
 
-    const icon =
-      milestone.querySelector(".milestone-icon");
-
-
-    // ----------------------------------------
-    // 以前の「マイルストーン全体クリックで編集」
-    // を解除する
-    // ----------------------------------------
-
-    milestoneButton?.removeAttribute("onclick");
-
-
-    // ----------------------------------------
-    // タスクは常時展開
-    // ----------------------------------------
-
-    if (branch) {
-
-      branch.hidden = false;
-
-      branch.classList.add("is-open");
-    }
-
-
-    if (milestoneButton) {
-
-      milestoneButton.setAttribute(
-        "aria-expanded",
-        "true"
-      );
-    }
-
-
-    // ----------------------------------------
-    // アイコンが編集ボタンだと分かるようにする
-    // ----------------------------------------
-
-    if (icon) {
-
-      icon.setAttribute(
-        "title",
-        "マイルストーンを編集"
-      );
-
-      icon.setAttribute(
-        "aria-label",
-        "マイルストーンを編集"
-      );
-    }
-
-
-    // ----------------------------------------
-    // 古い開閉ボタンがあれば削除
-    // ----------------------------------------
-
-    milestone
-      .querySelector(".milestone-toggle")
-      ?.remove();
-
-
-    // ----------------------------------------
-    // 左右移動ボタン
-    // ----------------------------------------
-
-    if (
-      !milestone.querySelector(
-        ".milestone-navigation"
-      )
-    ) {
-
-      const navigation =
-        createElement(
-          "div",
-          "milestone-navigation"
+      const icon =
+        milestone.querySelector(
+          ".milestone-icon"
         );
 
 
-      navigation.innerHTML = `
+      // ========================================
+      // ▼ 古い直接編集処理を解除
+      // ========================================
 
-        <button
-          type="button"
-          class="milestone-nav-button milestone-nav-left"
-          data-direction="-1"
-          aria-label="左のマイルストーンへ"
-        >
-          ◀
-        </button>
-
-        <button
-          type="button"
-          class="milestone-nav-button milestone-nav-right"
-          data-direction="1"
-          aria-label="右のマイルストーンへ"
-        >
-          ▶
-        </button>
-
-      `;
+      milestoneButton
+        ?.removeAttribute("onclick");
 
 
-      // マイルストーン本体の直後へ配置
-      milestoneButton?.after(navigation);
+      // ========================================
+      // ▼ タスクは常時展開
+      // ========================================
+
+      if (branch) {
+
+        branch.hidden = false;
+
+        branch.classList.add(
+          "is-open"
+        );
+      }
+
+
+      if (milestoneButton) {
+
+        milestoneButton.setAttribute(
+          "aria-expanded",
+          "true"
+        );
+      }
+
+
+      // ========================================
+      // ▼ アイコン単独編集は廃止
+      //
+      // 前回付けたtitle等も削除する
+      // ========================================
+
+      if (icon) {
+
+        icon.removeAttribute("title");
+
+        icon.removeAttribute(
+          "aria-label"
+        );
+      }
+
+
+      // ========================================
+      // ▼ 古いタスク開閉ボタン削除
+      // ========================================
+
+      milestone
+        .querySelector(
+          ".milestone-toggle"
+        )
+        ?.remove();
+
+
+      // ========================================
+      // ▼ 前回追加した左右矢印を削除
+      // ========================================
+
+      milestone
+        .querySelector(
+          ".milestone-navigation"
+        )
+        ?.remove();
     }
-  });
+  );
 
 
-  // 順番による色を反映
+  // 順番による色だけは継続
   applyMilestoneOrderColors();
-
-  // 一番端の矢印を無効化
-  updateMilestoneNavigationState();
 }
 
 // ========================================
@@ -467,6 +573,394 @@ function animateNavigationButton(button) {
   }, 430);
 }
 
+// ========================================
+// ▼ 本当に中央に表示されているか判定
+//
+// selectedMilestoneだけでは判断しない。
+//
+// 実際の画面上の位置を測って、
+// マイルストーンの中心と
+// ロードマップ表示領域の中心が
+// 近ければ「中央」と判断する。
+// ========================================
+
+function isMilestoneCentered(
+  milestone
+) {
+
+  if (!milestone) {
+    return false;
+  }
+
+
+  const roadmap =
+    document.getElementById(
+      "roadmap"
+    );
+
+  const button =
+    milestone.querySelector(
+      ".milestone-button"
+    );
+
+
+  if (!roadmap || !button) {
+    return false;
+  }
+
+
+  const roadmapRect =
+    roadmap.getBoundingClientRect();
+
+  const buttonRect =
+    button.getBoundingClientRect();
+
+
+  // ロードマップ表示領域の中央
+  const roadmapCenter =
+    roadmapRect.left +
+    roadmapRect.width / 2;
+
+
+  // マイルストーン本体の中央
+  const milestoneCenter =
+    buttonRect.left +
+    buttonRect.width / 2;
+
+
+  // ========================================
+  // 完全に1px単位で一致させると
+  // スクロール終了位置の小さな誤差で
+  // 判定に失敗することがある。
+  //
+  // そのため±36pxまでは
+  // 「中央」とみなす。
+  // ========================================
+
+  return (
+    Math.abs(
+      roadmapCenter -
+      milestoneCenter
+    ) <= 36
+  );
+}
+
+// ========================================
+// ▼ PC用ロードマップ横ドラッグ
+//
+// マウスの左ボタンを押したまま
+// 左右へシュッと動かすことで
+// ロードマップを移動できる。
+//
+// iPhoneのタッチスクロールには
+// ブラウザ標準の操作をそのまま使う。
+// ========================================
+
+function setupRoadmapDragging() {
+
+  const roadmap =
+    document.getElementById(
+      "roadmap"
+    );
+
+
+  if (!roadmap) {
+    return;
+  }
+
+
+  let drag = null;
+
+
+  // ========================================
+  // ▼ マウスを押した
+  // ========================================
+
+  roadmap.addEventListener(
+    "pointerdown",
+    (event) => {
+
+      // PCマウス専用
+      // iPhoneの指操作には介入しない
+      if (
+        event.pointerType !== "mouse"
+      ) {
+        return;
+      }
+
+
+      // 左クリックだけ
+      if (event.button !== 0) {
+        return;
+      }
+
+
+      // ----------------------------------------
+      // タスク上では
+      // 「タスク並び替え」を優先する
+      // ----------------------------------------
+
+      if (
+        event.target.closest(".task")
+      ) {
+        return;
+      }
+
+
+      // ----------------------------------------
+      // タスク追加ボタン等の操作も
+      // 横ドラッグには使わない
+      // ----------------------------------------
+
+      if (
+        event.target.closest(
+          ".add-task-button"
+        )
+      ) {
+        return;
+      }
+
+
+      drag = {
+
+        pointerId:
+          event.pointerId,
+
+        startX:
+          event.clientX,
+
+        startY:
+          event.clientY,
+
+        startScrollLeft:
+          roadmap.scrollLeft,
+
+        dragging:
+          false
+      };
+
+
+      roadmap.setPointerCapture?.(
+        event.pointerId
+      );
+    }
+  );
+
+
+  // ========================================
+  // ▼ 押したまま移動
+  // ========================================
+
+  roadmap.addEventListener(
+    "pointermove",
+    (event) => {
+
+      if (
+        !drag ||
+        drag.pointerId !==
+          event.pointerId
+      ) {
+        return;
+      }
+
+
+      const moveX =
+        event.clientX -
+        drag.startX;
+
+      const moveY =
+        event.clientY -
+        drag.startY;
+
+
+      // ----------------------------------------
+      // 少し動いただけなら
+      // 普通のクリック扱い
+      // ----------------------------------------
+
+      if (!drag.dragging) {
+
+        if (
+          Math.abs(moveX) < 7
+        ) {
+          return;
+        }
+
+
+        // 縦方向の動きの方が大きい場合は
+        // 横ドラッグを開始しない
+        if (
+          Math.abs(moveY) >
+          Math.abs(moveX)
+        ) {
+          return;
+        }
+
+
+        drag.dragging = true;
+
+        roadmap.classList.add(
+          "is-pointer-dragging"
+        );
+      }
+
+
+      event.preventDefault();
+
+
+      // ========================================
+      // マウスを右へ動かしたら
+      // 内容は左へ移動。
+      //
+      // マウスを左へ動かしたら
+      // 内容は右へ移動。
+      // ========================================
+
+      roadmap.scrollLeft =
+        drag.startScrollLeft -
+        moveX;
+    }
+  );
+
+
+  // ========================================
+  // ▼ ドラッグ終了
+  // ========================================
+
+  const finishDrag = (event) => {
+
+    if (
+      !drag ||
+      drag.pointerId !==
+        event.pointerId
+    ) {
+      return;
+    }
+
+
+    const wasDragging =
+      drag.dragging;
+
+
+    roadmap.classList.remove(
+      "is-pointer-dragging"
+    );
+
+
+    roadmap.releasePointerCapture?.(
+      event.pointerId
+    );
+
+
+    drag = null;
+
+
+    // ----------------------------------------
+    // 普通のクリックだった場合は
+    // 何もしない
+    // ----------------------------------------
+
+    if (!wasDragging) {
+      return;
+    }
+
+
+    // ========================================
+    // ドラッグ直後に発生するclickを
+    // 編集操作として認識させない
+    // ========================================
+
+    suppressRoadmapClickUntil =
+      Date.now() + 350;
+
+
+    // ========================================
+    // 現在最も中央に近い
+    // マイルストーンを探す
+    // ========================================
+
+    const roadmapRect =
+      roadmap.getBoundingClientRect();
+
+    const center =
+      roadmapRect.left +
+      roadmapRect.width / 2;
+
+
+    let nearest = null;
+
+    let nearestDistance =
+      Infinity;
+
+
+    getMilestones().forEach(
+      (milestone) => {
+
+        const button =
+          milestone.querySelector(
+            ".milestone-button"
+          );
+
+        if (!button) {
+          return;
+        }
+
+
+        const rect =
+          button.getBoundingClientRect();
+
+        const itemCenter =
+          rect.left +
+          rect.width / 2;
+
+        const distance =
+          Math.abs(
+            center -
+            itemCenter
+          );
+
+
+        if (
+          distance <
+          nearestDistance
+        ) {
+
+          nearestDistance =
+            distance;
+
+          nearest =
+            milestone;
+        }
+      }
+    );
+
+
+    // ========================================
+    // 一番近かったものを
+    // 最後にきれいに中央へ吸着させる
+    // ========================================
+
+    if (nearest) {
+
+      selectMilestone(
+        nearest,
+        true
+      );
+    }
+  };
+
+
+  roadmap.addEventListener(
+    "pointerup",
+    finishDrag
+  );
+
+  roadmap.addEventListener(
+    "pointercancel",
+    finishDrag
+  );
+}
+
 function selectMilestone(milestone, center = true) {
   if (!milestone) return;
   getMilestones().forEach((item) => item.classList.remove("is-selected"));
@@ -490,19 +984,95 @@ function setupTaskReordering() {
 
   let drag = null;
 
-  roadmap.addEventListener("pointerdown", (event) => {
-    const task = event.target.closest(".task");
-    if (!task || event.button !== 0) return;
+roadmap.addEventListener(
+  "pointerdown",
+  (event) => {
+
+    const task =
+      event.target.closest(".task");
+
+
+    if (
+      !task ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+
+    const milestone =
+      task.closest(".milestone");
+
+
+    // ========================================
+    // ▼ 中央にないタスク
+    //
+    // 長押ししても並び替えは開始しない。
+    // まず親マイルストーンを中央へ移動。
+    // ========================================
+
+    if (
+      !isMilestoneCentered(
+        milestone
+      )
+    ) {
+
+      // pointerdown後にclickも発生するので、
+      // そのclickで編集画面が開かないようにする
+      suppressTaskClickUntil =
+        Date.now() + 500;
+
+
+      selectMilestone(
+        milestone,
+        true
+      );
+
+      return;
+    }
+
+
+    // ========================================
+    // ▼ 中央にある
+    //
+    // この時点で初めて
+    // 長押し並び替えを許可する。
+    // ========================================
+
+    selectMilestone(
+      milestone,
+      false
+    );
+
+
     drag = {
+
       task,
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      lastY: event.clientY,
-      dragging: false,
-      timer: setTimeout(() => startTaskDrag(task), 360)
+
+      pointerId:
+        event.pointerId,
+
+      startX:
+        event.clientX,
+
+      startY:
+        event.clientY,
+
+      lastY:
+        event.clientY,
+
+      dragging:
+        false,
+
+      timer:
+        setTimeout(
+          () =>
+            startTaskDrag(task),
+          360
+        )
     };
-  });
+  }
+);
 
   roadmap.addEventListener("pointermove", (event) => {
     if (!drag || drag.pointerId !== event.pointerId) return;
@@ -706,24 +1276,118 @@ function animateTaskStateChange(
   }, 130);
 }
 
-function changeTaskStatus(task, status) {
-  const wasCurrent = getTaskStatus(task) === "current";
-  renderTaskStatus(task, status);
+// ========================================
+// ▼ タスク状態変更
+//
+// 状態が変わってロードマップ全体が
+// 再計算されても、操作したタスクの
+// マイルストーンを中央に維持する。
+// ========================================
+
+function changeTaskStatus(
+  task,
+  status
+) {
+
+  const milestone =
+    task.closest(".milestone");
+
+
+  const wasCurrent =
+    getTaskStatus(task) ===
+    "current";
+
+
+  renderTaskStatus(
+    task,
+    status
+  );
+
 
   if (status === "current") {
+
     setFlowFromCurrent(task);
-  } else if (status === "complete" && wasCurrent) {
-    advanceFromCompletedTask(task);
-  } else if (status === "next") {
+
+  } else if (
+    status === "complete" &&
+    wasCurrent
+  ) {
+
+    advanceFromCompletedTask(
+      task
+    );
+
+  } else if (
+    status === "next"
+  ) {
+
     getAllTasks()
-      .filter((item) => item !== task && getTaskStatus(item) === "next")
-      .forEach((item) => renderTaskStatus(item, "future"));
-  } else if (status === "future" && wasCurrent) {
-    const nextIncomplete = getAllTasks().find((item) => getTaskStatus(item) !== "complete");
-    if (nextIncomplete) setFlowFromCurrent(nextIncomplete);
+
+      .filter(
+        (item) =>
+          item !== task &&
+          getTaskStatus(item) ===
+            "next"
+      )
+
+      .forEach(
+        (item) =>
+          renderTaskStatus(
+            item,
+            "future"
+          )
+      );
+
+  } else if (
+    status === "future" &&
+    wasCurrent
+  ) {
+
+    const nextIncomplete =
+      getAllTasks().find(
+        (item) =>
+          getTaskStatus(item) !==
+          "complete"
+      );
+
+
+    if (nextIncomplete) {
+
+      setFlowFromCurrent(
+        nextIncomplete
+      );
+    }
   }
 
-  refreshProject({ animate: true, center: true });
+
+  // ========================================
+  // ▼ 操作したマイルストーンを
+  // 選択対象として維持
+  // ========================================
+
+  selectMilestone(
+    milestone,
+    false
+  );
+
+
+  // 自動中央移動はここでは行わせない
+  refreshProject({
+    animate: true,
+    center: false
+  });
+
+
+  // DOM更新後にもう一度中央位置を合わせる
+  requestAnimationFrame(() => {
+
+    centerMilestone(
+      milestone,
+      true
+    );
+  });
+
+
   saveProjectState();
 }
 
@@ -771,11 +1435,38 @@ function renderTaskStatus(task, status) {
   }
 }
 
-function refreshProject({ animate = true, center = false } = {}) {
+function refreshProject({
+  animate = true,
+  center = false
+} = {}) {
+
   refreshMilestoneStatuses();
-  refreshRoadmapLines(animate);
+
+  refreshRoadmapLines(
+    animate
+  );
+
   refreshProgressPanel();
-  if (center) requestAnimationFrame(() => centerCurrentMilestone(animate));
+
+
+  // ========================================
+  // マイルストーンの順番が変わった場合、
+  // その新しい順位に応じて
+  // 色も割り当て直す。
+  // ========================================
+
+  applyMilestoneOrderColors();
+
+
+  if (center) {
+
+    requestAnimationFrame(
+      () =>
+        centerCurrentMilestone(
+          animate
+        )
+    );
+  }
 }
 
 function refreshMilestoneStatuses() {
