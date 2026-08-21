@@ -1,4 +1,6 @@
 const STORAGE_KEY = "project-map-state-v4";
+let selectedMilestone = null;
+let suppressTaskClickUntil = 0;
 
 const MILESTONE_ICONS = {
   compass: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M29.5 18.5 26 26l-7.5 3.5L22 22z"/><circle cx="24" cy="24" r="2"/></svg>`,
@@ -9,7 +11,9 @@ const MILESTONE_ICONS = {
 document.addEventListener("DOMContentLoaded", () => {
   restoreProjectState();
   normalizeTaskStatuses();
+  ensureMilestoneControls();
   setupRoadmapControls();
+  setupTaskReordering();
   refreshProject({ animate: false, center: true });
   requestAnimationFrame(() => document.getElementById("roadmap")?.classList.add("is-ready"));
   window.addEventListener("resize", () => centerCurrentMilestone(false));
@@ -18,15 +22,19 @@ document.addEventListener("DOMContentLoaded", () => {
 function setupRoadmapControls() {
   const roadmap = document.getElementById("roadmap");
   roadmap?.addEventListener("click", (event) => {
-    const milestoneButton = event.target.closest(".milestone-button");
+    const toggleButton = event.target.closest(".milestone-toggle");
+    const navigationButton = event.target.closest(".milestone-nav-button");
     const task = event.target.closest(".task");
     const addTaskButton = event.target.closest(".add-task-button");
 
-    if (milestoneButton) {
-      const milestone = milestoneButton.closest(".milestone");
-      toggleMilestone(milestoneButton, milestone?.querySelector(".task-branch"));
-      centerMilestone(milestone);
+    if (toggleButton) {
+      const milestone = toggleButton.closest(".milestone");
+      toggleMilestone(toggleButton, milestone?.querySelector(".task-branch"));
+      selectMilestone(milestone);
+    } else if (navigationButton) {
+      navigateMilestone(Number(navigationButton.dataset.direction));
     } else if (task) {
+      if (Date.now() < suppressTaskClickUntil) return;
       openTaskStatusDialog(task);
     } else if (addTaskButton) {
       openAddTaskDialog(addTaskButton.closest(".milestone"));
@@ -39,6 +47,7 @@ function toggleMilestone(button, branch) {
   if (!button || !branch) return;
   const willOpen = button.getAttribute("aria-expanded") !== "true";
   button.setAttribute("aria-expanded", String(willOpen));
+  button.closest(".milestone")?.querySelector(".milestone-button")?.setAttribute("aria-expanded", String(willOpen));
   if (willOpen) {
     branch.hidden = false;
     requestAnimationFrame(() => branch.classList.add("is-open"));
@@ -52,16 +61,181 @@ function toggleMilestone(button, branch) {
 }
 
 function centerMilestone(milestone, smooth = true) {
-  const roadmap = document.getElementById("roadmap");
-  if (!roadmap || !milestone) return;
-  const left = milestone.offsetLeft - (roadmap.clientWidth - milestone.offsetWidth) / 2;
-  roadmap.scrollTo({ left: Math.max(0, left), behavior: smooth ? "smooth" : "auto" });
+  if (!milestone) return;
+  milestone.scrollIntoView({
+    behavior: smooth ? "smooth" : "auto",
+    block: "nearest",
+    inline: "center"
+  });
 }
 
 function centerCurrentMilestone(smooth = true) {
-  const current = document.querySelector('.milestone[data-status="current"]') ||
+  const current = (selectedMilestone?.isConnected ? selectedMilestone : null) ||
+    document.querySelector('.milestone[data-status="current"]') ||
     getMilestones().find((milestone) => milestone.dataset.status !== "complete");
+  if (!selectedMilestone && current) selectMilestone(current, false);
   centerMilestone(current, smooth);
+}
+
+function ensureMilestoneControls(root = document) {
+  const milestones = root.matches?.(".milestone")
+    ? [root]
+    : [...root.querySelectorAll(".milestone")];
+  milestones.forEach((milestone) => {
+    milestone.querySelector(".milestone-button")?.setAttribute(
+      "onclick",
+      "window.openMilestoneEditor(this)"
+    );
+    if (!milestone.querySelector(".milestone-toggle")) {
+      const toggle = createElement("button", "milestone-toggle");
+      toggle.type = "button";
+      toggle.setAttribute("aria-label", "タスク一覧を開閉");
+      toggle.setAttribute(
+        "aria-expanded",
+        milestone.querySelector(".milestone-button")?.getAttribute("aria-expanded") || "false"
+      );
+      toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>`;
+      milestone.querySelector(".milestone-button")?.after(toggle);
+    }
+
+    if (!milestone.querySelector(".milestone-navigation")) {
+      const navigation = createElement("div", "milestone-navigation");
+      navigation.innerHTML = `
+        <button type="button" class="milestone-nav-button" data-direction="-1" aria-label="左のマイルストーンへ">←</button>
+        <button type="button" class="milestone-nav-button" data-direction="1" aria-label="右のマイルストーンへ">→</button>
+      `;
+      milestone.querySelector(".milestone-toggle")?.after(navigation);
+    }
+
+  });
+}
+
+function selectMilestone(milestone, center = true) {
+  if (!milestone) return;
+  getMilestones().forEach((item) => item.classList.remove("is-selected"));
+  milestone.classList.add("is-selected");
+  selectedMilestone = milestone;
+  if (center) centerMilestone(milestone);
+}
+
+function navigateMilestone(direction) {
+  const milestones = getMilestones();
+  const current = selectedMilestone && milestones.includes(selectedMilestone)
+    ? selectedMilestone
+    : document.querySelector(".milestone-current");
+  const target = milestones[milestones.indexOf(current) + direction];
+  if (target) selectMilestone(target);
+}
+
+function setupTaskReordering() {
+  const roadmap = document.getElementById("roadmap");
+  if (!roadmap) return;
+
+  let drag = null;
+
+  roadmap.addEventListener("pointerdown", (event) => {
+    const task = event.target.closest(".task");
+    if (!task || event.button !== 0) return;
+    drag = {
+      task,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastY: event.clientY,
+      dragging: false,
+      timer: setTimeout(() => startTaskDrag(task), 360)
+    };
+  });
+
+  roadmap.addEventListener("pointermove", (event) => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.dragging && distance > 8) {
+      clearTimeout(drag.timer);
+      drag = null;
+      return;
+    }
+    if (!drag.dragging) return;
+
+    event.preventDefault();
+    drag.lastY = event.clientY;
+    drag.task.style.transform = `translateY(${event.clientY - drag.startY}px) scale(1.03)`;
+    maybeSwapTask(drag, event.clientY);
+  });
+
+  const finish = (event) => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    clearTimeout(drag.timer);
+    if (drag.dragging) finishTaskDrag(drag.task);
+    drag = null;
+  };
+  roadmap.addEventListener("pointerup", finish);
+  roadmap.addEventListener("pointercancel", finish);
+
+  function startTaskDrag(task) {
+    if (!drag || drag.task !== task) return;
+    drag.dragging = true;
+    suppressTaskClickUntil = Date.now() + 600;
+    task.classList.add("is-dragging");
+    task.closest(".task-list")?.classList.add("is-reordering");
+    navigator.vibrate?.(18);
+  }
+
+  function maybeSwapTask(state, pointerY) {
+    const task = state.task;
+    const list = task.closest(".task-list");
+    const siblings = [...list.querySelectorAll(":scope > .task")];
+    const index = siblings.indexOf(task);
+    const previous = siblings[index - 1];
+    const next = siblings[index + 1];
+
+    if (next) {
+      const rect = next.getBoundingClientRect();
+      if (pointerY > rect.top + rect.height * 0.25) {
+        animateTaskSwap(list, task, () => next.after(task));
+        state.startY = pointerY;
+        task.style.transform = "translateY(0) scale(1.03)";
+        return;
+      }
+    }
+    if (previous) {
+      const rect = previous.getBoundingClientRect();
+      if (pointerY < rect.bottom - rect.height * 0.25) {
+        animateTaskSwap(list, task, () => previous.before(task));
+        state.startY = pointerY;
+        task.style.transform = "translateY(0) scale(1.03)";
+      }
+    }
+  }
+}
+
+function animateTaskSwap(list, draggedTask, move) {
+  const tasks = [...list.querySelectorAll(":scope > .task")];
+  const before = new Map(tasks.map((task) => [task, task.getBoundingClientRect().top]));
+  move();
+  tasks.forEach((task) => {
+    if (task === draggedTask) return;
+    const distance = before.get(task) - task.getBoundingClientRect().top;
+    if (distance) {
+      task.animate(
+        [{ transform: `translateY(${distance}px)` }, { transform: "translateY(0)" }],
+        { duration: 240, easing: "cubic-bezier(0.2, 0.9, 0.35, 1)" }
+      );
+    }
+  });
+}
+
+function finishTaskDrag(task) {
+  task.style.transform = "";
+  task.classList.remove("is-dragging");
+  task.classList.add("is-dropping");
+  task.closest(".task-list")?.classList.remove("is-reordering");
+  setTimeout(() => task.classList.remove("is-dropping"), 380);
+
+  const current = getAllTasks().find((item) => getTaskStatus(item) === "current");
+  if (current) setFlowFromCurrent(current);
+  refreshProject({ animate: false, center: false });
+  saveProjectState();
 }
 
 function openTaskStatusDialog(task) {
@@ -76,12 +250,58 @@ function openTaskStatusDialog(task) {
     button.type = "button";
     button.innerHTML = `<span class="status-option-icon">${icon}</span><span>${label}</span>`;
     button.addEventListener("click", () => {
-      changeTaskStatus(task, status);
       closeDialog();
+      animateTaskStateChange(task, () => changeTaskStatus(task, status));
     });
     content.appendChild(button);
   });
-  openDialog({ label: "タスクの状態", title: getTaskName(task), content });
+
+  const editArea = createElement("div", "task-edit-area");
+  const nameInput = createTextInput("タスク名");
+  nameInput.value = getTaskName(task);
+  const saveNameButton = createElement("button", "dialog-secondary", "タスク名を変更");
+  saveNameButton.type = "button";
+  saveNameButton.addEventListener("click", () => {
+    const name = nameInput.value.trim();
+    if (!name) return showInputError(nameInput, "タスク名を入力してくれ。");
+    task.querySelector(".task-name").textContent = name;
+    closeDialog();
+    animateTaskStateChange(task, () => {
+      refreshProject({ animate: false, center: false });
+      saveProjectState();
+    });
+  });
+  const deleteButton = createElement("button", "dialog-danger", "このタスクを削除");
+  deleteButton.type = "button";
+  deleteButton.addEventListener("click", () => {
+    if (!window.confirm(`「${getTaskName(task)}」を削除するか？`)) return;
+    const wasCurrent = getTaskStatus(task) === "current";
+    task.remove();
+    if (wasCurrent) {
+      const next = getAllTasks().find((item) => getTaskStatus(item) !== "complete");
+      if (next) setFlowFromCurrent(next);
+    }
+    closeDialog();
+    refreshProject({ animate: true, center: true });
+    saveProjectState();
+  });
+  editArea.append(nameInput, saveNameButton, deleteButton);
+  content.after(editArea);
+
+  const wrapper = createElement("div", "task-dialog-content");
+  wrapper.append(content, editArea);
+  openDialog({ label: "タスクの状態", title: getTaskName(task), content: wrapper });
+}
+
+function animateTaskStateChange(task, update) {
+  task.classList.remove("is-state-changing", "is-state-changed");
+  task.classList.add("is-state-changing");
+  setTimeout(() => {
+    update();
+    task.classList.remove("is-state-changing");
+    task.classList.add("is-state-changed");
+    setTimeout(() => task.classList.remove("is-state-changed"), 360);
+  }, 110);
 }
 
 function changeTaskStatus(task, status) {
@@ -249,6 +469,61 @@ function openAddMilestoneDialog() {
   openDialog({ label: "ADD MILESTONE", title: "マイルストーンを追加", content, focus: nameInput });
 }
 
+function openMilestoneEditDialog(milestone) {
+  if (!milestone) return;
+  const nameInput = createTextInput("マイルストーン名");
+  nameInput.value = milestone.querySelector(".milestone-name")?.textContent.trim() || "";
+  const picker = createIconPicker(milestone.dataset.iconKey || "compass");
+  const fields = createElement("div", "dialog-fields");
+  fields.append(nameInput, picker.element);
+
+  const saveButton = createElement("button", "dialog-submit", "変更を保存");
+  saveButton.type = "button";
+  saveButton.addEventListener("click", () => {
+    const name = nameInput.value.trim();
+    if (!name) return showInputError(nameInput, "マイルストーン名を入力してくれ。");
+    milestone.querySelector(".milestone-name").textContent = name;
+    milestone.dataset.iconKey = picker.getValue();
+    milestone.querySelector(".milestone-icon").innerHTML = MILESTONE_ICONS[picker.getValue()];
+    closeDialog();
+    refreshProgressPanel();
+    saveProjectState();
+  });
+
+  const reorder = createElement("div", "milestone-reorder-controls");
+  const moveLeft = createElement("button", "dialog-secondary", "← 左へ入れ替え");
+  const moveRight = createElement("button", "dialog-secondary", "右へ入れ替え →");
+  moveLeft.type = moveRight.type = "button";
+  moveLeft.addEventListener("click", () => moveMilestone(milestone, -1));
+  moveRight.addEventListener("click", () => moveMilestone(milestone, 1));
+  reorder.append(moveLeft, moveRight);
+
+  const content = createElement("div", "milestone-edit-content");
+  content.append(fields, saveButton, reorder);
+  openDialog({ label: "MILESTONE", title: "マイルストーンを編集", content, focus: nameInput });
+}
+
+function moveMilestone(milestone, direction) {
+  const roadmap = document.getElementById("roadmap");
+  const milestones = getMilestones();
+  const lines = [...roadmap.querySelectorAll(":scope > .roadmap-line")];
+  const index = milestones.indexOf(milestone);
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= milestones.length) return;
+
+  [milestones[index], milestones[targetIndex]] = [milestones[targetIndex], milestones[index]];
+  roadmap.replaceChildren();
+  milestones.forEach((item, itemIndex) => {
+    roadmap.appendChild(item);
+    if (lines[itemIndex]) roadmap.appendChild(lines[itemIndex]);
+  });
+  closeDialog();
+  refreshMilestoneStatuses();
+  refreshProgressPanel();
+  selectMilestone(milestone);
+  saveProjectState();
+}
+
 function appendMilestone({ name, firstTask, iconKey }) {
   const roadmap = document.getElementById("roadmap");
   const goal = getMilestones().find((item) => item.dataset.milestoneId === "complete");
@@ -262,6 +537,8 @@ function appendMilestone({ name, firstTask, iconKey }) {
     if (getMilestones().length) roadmap.appendChild(line);
     roadmap.appendChild(milestone);
   }
+  ensureMilestoneControls(milestone);
+  selectMilestone(milestone);
   requestAnimationFrame(() => centerMilestone(milestone));
 }
 
@@ -336,7 +613,7 @@ function createTextInput(placeholder) {
   return input;
 }
 
-function createIconPicker() {
+function createIconPicker(selectedKey = "compass") {
   const element = createElement("fieldset", "icon-picker");
   element.appendChild(createElement("legend", "", "アイコンを選ぶ"));
   Object.entries(MILESTONE_ICONS).forEach(([key, svg], index) => {
@@ -345,7 +622,7 @@ function createIconPicker() {
     input.type = "radio";
     input.name = "milestone-icon";
     input.value = key;
-    input.checked = index === 0;
+    input.checked = key === selectedKey || (!MILESTONE_ICONS[selectedKey] && index === 0);
     const preview = createElement("span", "icon-choice-preview");
     preview.innerHTML = svg;
     label.append(input, preview);
@@ -413,4 +690,9 @@ function createElement(tag, className = "", text = "") {
 function setText(selector, text) { const element = document.querySelector(selector); if (element) element.textContent = text; }
 
 window.refreshProjectProgress = () => refreshProject({ animate: true, center: true });
+window.openMilestoneEditor = (button) => {
+  const milestone = button.closest(".milestone");
+  selectMilestone(milestone);
+  openMilestoneEditDialog(milestone);
+};
 
