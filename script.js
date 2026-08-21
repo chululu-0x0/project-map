@@ -574,74 +574,44 @@ function animateNavigationButton(button) {
 }
 
 // ========================================
-// ▼ 本当に中央に表示されているか判定
+// ▼ 操作可能な中央マイルストーンか判定
 //
-// selectedMilestoneだけでは判断しない。
+// 前回は画面上の座標を直接測っていたため、
+// PCのホバーアニメーションや
+// スクロール位置の微妙な誤差によって
+// 「中央なのに中央ではない」判定が
+// 起こることがあった。
 //
-// 実際の画面上の位置を測って、
-// マイルストーンの中心と
-// ロードマップ表示領域の中心が
-// 近ければ「中央」と判断する。
+// 今回は
+// 「現在選択されているマイルストーン」
+// を中央の操作対象として扱う。
+//
+// つまり操作ルールは、
+//
+// 1回目
+//   → マイルストーンを選択して中央へ
+//
+// 2回目
+//   → 選択済みなので編集可能
+//
+// となる。
 // ========================================
 
-function isMilestoneCentered(
-  milestone
-) {
+function isMilestoneCentered(milestone) {
 
   if (!milestone) {
     return false;
   }
 
 
-  const roadmap =
-    document.getElementById(
-      "roadmap"
-    );
-
-  const button =
-    milestone.querySelector(
-      ".milestone-button"
-    );
-
-
-  if (!roadmap || !button) {
-    return false;
-  }
-
-
-  const roadmapRect =
-    roadmap.getBoundingClientRect();
-
-  const buttonRect =
-    button.getBoundingClientRect();
-
-
-  // ロードマップ表示領域の中央
-  const roadmapCenter =
-    roadmapRect.left +
-    roadmapRect.width / 2;
-
-
-  // マイルストーン本体の中央
-  const milestoneCenter =
-    buttonRect.left +
-    buttonRect.width / 2;
-
-
   // ========================================
-  // 完全に1px単位で一致させると
-  // スクロール終了位置の小さな誤差で
-  // 判定に失敗することがある。
-  //
-  // そのため±36pxまでは
-  // 「中央」とみなす。
+  // 選択されているマイルストーン
+  // ＝ 現在中央で操作する対象
   // ========================================
 
   return (
-    Math.abs(
-      roadmapCenter -
-      milestoneCenter
-    ) <= 36
+    selectedMilestone === milestone &&
+    milestone.isConnected
   );
 }
 
@@ -1004,32 +974,25 @@ roadmap.addEventListener(
       task.closest(".milestone");
 
 
-    // ========================================
-    // ▼ 中央にないタスク
-    //
-    // 長押ししても並び替えは開始しない。
-    // まず親マイルストーンを中央へ移動。
-    // ========================================
+// ========================================
+// ▼ 中央にないタスク
+//
+// 並び替えは開始しない。
+//
+// 中央への移動自体は通常のclick処理に
+// 任せることで、
+// 「クリック」と「長押し」の処理が
+// 二重に走らないようにする。
+// ========================================
 
-    if (
-      !isMilestoneCentered(
-        milestone
-      )
-    ) {
+if (
+  !isMilestoneCentered(
+    milestone
+  )
+) {
 
-      // pointerdown後にclickも発生するので、
-      // そのclickで編集画面が開かないようにする
-      suppressTaskClickUntil =
-        Date.now() + 500;
-
-
-      selectMilestone(
-        milestone,
-        true
-      );
-
-      return;
-    }
+  return;
+}
 
 
     // ========================================
