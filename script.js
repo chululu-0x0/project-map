@@ -1228,4 +1228,3 @@ function getTaskStatus(task) {
 
 window.refreshProjectProgress =
   refreshProjectProgress;
-
