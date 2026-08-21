@@ -156,17 +156,7 @@ function closeBranch(button, branch) {
   );
 
 
-  setTimeout(() => {
-
-    if (
-      button.getAttribute("aria-expanded") === "false"
-    ) {
-
-      branch.hidden = true;
-
-    }
-
-  }, 400);
+  setTimeout(finishClose, 400);
 
 }
 
@@ -444,36 +434,14 @@ function changeTaskStatus(task, status) {
     プロジェクト内で1個だけ
   */
 
-  if (status === "current") {
+  if (
+    status === "current" ||
+    status === "next"
+  ) {
 
     document
       .querySelectorAll(
-        '.task[data-status="current"]'
-      )
-      .forEach((otherTask) => {
-
-        if (otherTask === task) return;
-
-
-        renderTaskStatus(
-          otherTask,
-          "future"
-        );
-
-      });
-
-  }
-
-
-  /*
-    「次にやる」も1個だけ
-  */
-
-  if (status === "next") {
-
-    document
-      .querySelectorAll(
-        '.task[data-status="next"]'
+        `.task[data-status="${status}"]`
       )
       .forEach((otherTask) => {
 
