@@ -1,49 +1,37 @@
 /* ========================================
-   script.js START
-   Project Map
-======================================== */
-
-
-/* ========================================
-   ▼ 保存設定
-
-   v5は現在の保存データと互換性を保つ。
-   既存データを消さずに読み込む。
+   ▼ 保存・基本設定 ここから
 ======================================== */
 
 const STORAGE_KEY =
   "project-map-state-v5";
 
 
-/* ========================================
-   ▼ 現在選択しているマイルストーン
-======================================== */
-
-let selectedMilestone = null;
+let selectedMilestone =
+  null;
 
 
-/* ========================================
-   ▼ 誤クリック防止時間
-======================================== */
+/*
+  誤クリック防止。
+*/
+let suppressTaskClickUntil =
+  0;
 
-let suppressTaskClickUntil = 0;
+let suppressRoadmapClickUntil =
+  0;
 
-let suppressRoadmapClickUntil = 0;
+
+/*
+  タスクをドラッグした後、
+  Safariで遅れて発生するclickを
+  1回だけ無効化するために使う。
+*/
+let suppressNextTaskClick =
+  null;
 
 
-/* ========================================
-   ▼ マイルストーン順位カラー
-
-   1番目 ピンク
-   2番目 水色
-   3番目 緑
-   4番目 紫
-   5番目 黄色
-   6番目 コーラル
-
-   7番目以降はまた最初から繰り返す。
-======================================== */
-
+/*
+  マイルストーンの順位カラー。
+*/
 const MILESTONE_ORDER_COLORS = [
 
   {
@@ -78,10 +66,9 @@ const MILESTONE_ORDER_COLORS = [
 ];
 
 
-/* ========================================
-   ▼ マイルストーン用SVGアイコン
-======================================== */
-
+/*
+  SVGアイコン。
+*/
 const MILESTONE_ICONS = {
 
   compass: `
@@ -107,12 +94,13 @@ const MILESTONE_ICONS = {
   `
 };
 
+/* ========================================
+   ▲ 保存・基本設定 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ 初回表示用データ
-
-   localStorageに保存済みデータがない場合だけ
-   この内容をロードマップへ表示する。
+   ▼ 初期サンプルデータ ここから
 ======================================== */
 
 const DEFAULT_PROJECT = [
@@ -121,188 +109,294 @@ const DEFAULT_PROJECT = [
     id: "planning",
     name: "企画",
     iconHtml: "💡",
+
     tasks: [
+
       {
-        name: "作りたいものを決める",
-        status: "complete"
+        name:
+          "作りたいものを決める",
+
+        status:
+          "complete"
       },
+
       {
-        name: "必要な機能を整理する",
-        status: "complete"
+        name:
+          "必要な機能を整理する",
+
+        status:
+          "complete"
       },
+
       {
-        name: "Ver.1.0の完成条件を決める",
-        status: "complete"
+        name:
+          "Ver.1.0の完成条件を決める",
+
+        status:
+          "complete"
       }
     ]
   },
+
 
   {
     id: "base",
     name: "基本画面",
     iconHtml: "⚙️",
+
     tasks: [
+
       {
-        name: "専用フォルダを作る",
-        status: "complete"
+        name:
+          "専用フォルダを作る",
+
+        status:
+          "complete"
       },
+
       {
-        name: "GitHubリポジトリを作る",
-        status: "complete"
+        name:
+          "GitHubリポジトリを作る",
+
+        status:
+          "complete"
       },
+
       {
-        name: "基本ファイルを用意する",
-        status: "complete"
+        name:
+          "基本ファイルを用意する",
+
+        status:
+          "complete"
       },
+
       {
-        name: "基本画面を組み立てる",
-        status: "current"
+        name:
+          "基本画面を組み立てる",
+
+        status:
+          "current"
       },
+
       {
-        name: "デザインを整える",
-        status: "next"
+        name:
+          "デザインを整える",
+
+        status:
+          "next"
       }
     ]
   },
+
 
   {
     id: "roadmap",
     name: "ロードマップ機能",
     iconHtml: "🗺️",
+
     tasks: [
+
       {
-        name: "マイルストーンを追加",
-        status: "future"
+        name:
+          "マイルストーンを追加",
+
+        status:
+          "future"
       },
+
       {
-        name: "マイルストーンを線で接続",
-        status: "future"
+        name:
+          "マイルストーンを線で接続",
+
+        status:
+          "future"
       },
+
       {
-        name: "完了部分の線を色付け",
-        status: "future"
+        name:
+          "完了部分の線を色付け",
+
+        status:
+          "future"
       },
+
       {
-        name: "今ここを表示",
-        status: "future"
+        name:
+          "今ここを表示",
+
+        status:
+          "future"
       }
     ]
   },
+
 
   {
     id: "tasks",
     name: "タスク管理",
     iconHtml: "☑️",
+
     tasks: [
+
       {
-        name: "タスクを追加・編集",
-        status: "future"
+        name:
+          "タスクを追加・編集",
+
+        status:
+          "future"
       },
+
       {
-        name: "完了状態を変更",
-        status: "future"
+        name:
+          "完了状態を変更",
+
+        status:
+          "future"
       },
+
       {
-        name: "今やっているタスクを指定",
-        status: "future"
+        name:
+          "今やっているタスクを指定",
+
+        status:
+          "future"
       },
+
       {
-        name: "次のタスクを表示",
-        status: "future"
+        name:
+          "次のタスクを表示",
+
+        status:
+          "future"
       }
     ]
   },
+
 
   {
     id: "sync",
     name: "クラウド同期",
     iconHtml: "☁️",
+
     tasks: [
+
       {
-        name: "Supabaseを準備",
-        status: "future"
+        name:
+          "Supabaseを準備",
+
+        status:
+          "future"
       },
+
       {
-        name: "ログイン機能",
-        status: "future"
+        name:
+          "ログイン機能",
+
+        status:
+          "future"
       },
+
       {
-        name: "データをクラウド保存",
-        status: "future"
+        name:
+          "データをクラウド保存",
+
+        status:
+          "future"
       },
+
       {
-        name: "PC・iPhone間で同期",
-        status: "future"
+        name:
+          "PC・iPhone間で同期",
+
+        status:
+          "future"
       }
     ]
   },
+
 
   {
     id: "complete",
     name: "Ver.1.0完成",
     iconHtml: "🏆",
+
     tasks: [
+
       {
-        name: "Windowsで動作確認",
-        status: "future"
+        name:
+          "Windowsで動作確認",
+
+        status:
+          "future"
       },
+
       {
-        name: "iPhoneで動作確認",
-        status: "future"
+        name:
+          "iPhoneで動作確認",
+
+        status:
+          "future"
       },
+
       {
-        name: "PWAとしてホーム画面に追加",
-        status: "future"
+        name:
+          "PWAとしてホーム画面に追加",
+
+        status:
+          "future"
       }
     ]
   }
 ];
 
+/* ========================================
+   ▲ 初期サンプルデータ ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ 起動
+   ▼ アプリ起動 ここから
 ======================================== */
 
 document.addEventListener(
   "DOMContentLoaded",
   () => {
 
-    /* 保存データ、なければ初期データ */
     restoreProjectState();
 
-
-    /* タスク状態の見た目を整える */
     normalizeTaskStatuses();
 
-
-    /* クリック操作 */
     setupRoadmapControls();
 
-
-    /* タスク長押し上下移動 */
     setupTaskReordering();
 
-
-    /* PCマウス横ドラッグ */
     setupRoadmapDragging();
 
-
-    /* スクロール後の中央対象同期 */
     setupRoadmapSelectionSync();
 
-
-    /* ダブルクリック拡大等の保険 */
     setupInteractionGuards();
 
 
-    /* 状態再計算 */
     refreshProject({
-      animate: false,
-      center: false
+      animate:
+        false,
+
+      center:
+        false
     });
 
 
-    /* 初期選択 */
+    /*
+      最初に中央へ持ってくる対象。
+
+      current
+      ↓
+      未完了
+      ↓
+      先頭
+
+      の順。
+    */
     const initial =
       document.querySelector(
         '.milestone[data-status="current"]'
@@ -325,34 +419,41 @@ document.addEventListener(
       );
 
 
-      requestAnimationFrame(() => {
+      requestAnimationFrame(
+        () => {
 
-        centerMilestone(
-          initial,
-          false
-        );
+          centerMilestone(
+            initial,
+            false
+          );
 
-      });
+        }
+      );
     }
 
 
-    requestAnimationFrame(() => {
+    requestAnimationFrame(
+      () => {
 
-      document
-        .getElementById("roadmap")
-        ?.classList.add(
-          "is-ready"
-        );
-    });
+        document
+          .getElementById(
+            "roadmap"
+          )
+          ?.classList.add(
+            "is-ready"
+          );
+
+      }
+    );
 
 
-    /* 画面回転・サイズ変更 */
     window.addEventListener(
       "resize",
       () => {
 
         if (
-          selectedMilestone?.isConnected
+          selectedMilestone
+            ?.isConnected
         ) {
 
           centerMilestone(
@@ -365,17 +466,21 @@ document.addEventListener(
   }
 );
 
+/* ========================================
+   ▲ アプリ起動 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ ロードマップクリック操作
+   ▼ クリック・編集操作 ここから
 
-   基本ルール：
+   共通ルール：
 
-   中央ではない
-   → 1回目は中央へ移動
+   中央にない
+   → 1回目は中央へ
 
-   中央かつ選択済み
-   → 2回目で編集
+   中央にある
+   → 次のクリックで編集
 ======================================== */
 
 function setupRoadmapControls() {
@@ -395,7 +500,6 @@ function setupRoadmapControls() {
     "click",
     event => {
 
-      /* PCドラッグ直後の誤クリック防止 */
       if (
         Date.now() <
         suppressRoadmapClickUntil
@@ -416,6 +520,24 @@ function setupRoadmapControls() {
 
       if (task) {
 
+        /*
+          iPhoneのドラッグ終了後に
+          遅れて発生したclick。
+
+          同じタスクなら1回だけ完全無視。
+        */
+        if (
+          suppressNextTaskClick ===
+          task
+        ) {
+
+          suppressNextTaskClick =
+            null;
+
+          return;
+        }
+
+
         if (
           Date.now() <
           suppressTaskClickUntil
@@ -430,10 +552,6 @@ function setupRoadmapControls() {
           );
 
 
-        /*
-          中央かつ選択済みではない
-          → 中央へ移動だけ
-        */
         if (
           !canEditMilestone(
             milestone
@@ -449,9 +567,6 @@ function setupRoadmapControls() {
         }
 
 
-        /*
-          中央ならタスク編集
-        */
         openTaskStatusDialog(
           task
         );
@@ -470,7 +585,9 @@ function setupRoadmapControls() {
         );
 
 
-      if (addTaskButton) {
+      if (
+        addTaskButton
+      ) {
 
         const milestone =
           addTaskButton.closest(
@@ -511,7 +628,9 @@ function setupRoadmapControls() {
         );
 
 
-      if (milestoneButton) {
+      if (
+        milestoneButton
+      ) {
 
         const milestone =
           milestoneButton.closest(
@@ -519,12 +638,6 @@ function setupRoadmapControls() {
           );
 
 
-        /*
-          中央ではない、または
-          選択されていない
-
-          → まず中央へ。
-        */
         if (
           !canEditMilestone(
             milestone
@@ -540,11 +653,6 @@ function setupRoadmapControls() {
         }
 
 
-        /*
-          すでに中央かつ選択済み
-
-          → 編集画面。
-        */
         openMilestoneEditDialog(
           milestone
         );
@@ -552,10 +660,6 @@ function setupRoadmapControls() {
     }
   );
 
-
-  /* ========================================
-     マイルストーン追加
-  ======================================== */
 
   document
     .getElementById(
@@ -567,16 +671,13 @@ function setupRoadmapControls() {
     );
 }
 
+/* ========================================
+   ▲ クリック・編集操作 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ 本当に中央か判定
-
-   重要：
-   .milestone-button ではなく
-   .milestone 自体の位置を見る。
-
-   ホバー演出でbuttonだけ動いても
-   中央判定には影響しない。
+   ▼ 中央判定・選択 ここから
 ======================================== */
 
 function isMilestoneCentered(
@@ -599,6 +700,12 @@ function isMilestoneCentered(
   }
 
 
+  /*
+    buttonではなくmilestone自体を測る。
+
+    ホバーでbuttonが動いても
+    中央判定には影響しない。
+  */
   const roadmapRect =
     roadmap.getBoundingClientRect();
 
@@ -617,28 +724,15 @@ function isMilestoneCentered(
     milestoneRect.width / 2;
 
 
-  const distance =
+  return (
     Math.abs(
       roadmapCenter -
       milestoneCenter
-    );
-
-
-  /*
-    数px程度のスクロール誤差は許可。
-  */
-  return distance <= 42;
+    )
+    <= 44
+  );
 }
 
-
-/* ========================================
-   ▼ 編集可能か判定
-
-   ・選択済み
-   ・実際に中央
-
-   両方を満たした場合のみtrue。
-======================================== */
 
 function canEditMilestone(
   milestone
@@ -646,15 +740,14 @@ function canEditMilestone(
 
   return (
     milestone &&
-    selectedMilestone === milestone &&
-    isMilestoneCentered(milestone)
+    selectedMilestone ===
+      milestone &&
+    isMilestoneCentered(
+      milestone
+    )
   );
 }
 
-
-/* ========================================
-   ▼ 選択
-======================================== */
 
 function selectMilestone(
   milestone,
@@ -672,6 +765,7 @@ function selectMilestone(
       item.classList.remove(
         "is-selected"
       );
+
     }
   );
 
@@ -695,10 +789,6 @@ function selectMilestone(
 }
 
 
-/* ========================================
-   ▼ 中央へスクロール
-======================================== */
-
 function centerMilestone(
   milestone,
   smooth = true
@@ -713,8 +803,10 @@ function centerMilestone(
 
     behavior:
       smooth
-        ? "smooth"
-        : "auto",
+        ?
+        "smooth"
+        :
+        "auto",
 
     block:
       "nearest",
@@ -724,47 +816,6 @@ function centerMilestone(
   });
 }
 
-
-/* ========================================
-   ▼ 現在地を中央へ
-======================================== */
-
-function centerCurrentMilestone(
-  smooth = true
-) {
-
-  const target =
-    selectedMilestone?.isConnected
-      ? selectedMilestone
-      :
-      document.querySelector(
-        '.milestone[data-status="current"]'
-      )
-      ||
-      getMilestones()[0];
-
-
-  if (!target) {
-    return;
-  }
-
-
-  selectMilestone(
-    target,
-    false
-  );
-
-
-  centerMilestone(
-    target,
-    smooth
-  );
-}
-
-
-/* ========================================
-   ▼ 最も中央に近いマイルストーン
-======================================== */
 
 function getNearestMilestone() {
 
@@ -788,7 +839,9 @@ function getNearestMilestone() {
     roadmapRect.width / 2;
 
 
-  let nearest = null;
+  let nearest =
+    null;
+
 
   let nearestDistance =
     Infinity;
@@ -798,7 +851,8 @@ function getNearestMilestone() {
     milestone => {
 
       const rect =
-        milestone.getBoundingClientRect();
+        milestone
+          .getBoundingClientRect();
 
 
       const itemCenter =
@@ -831,14 +885,13 @@ function getNearestMilestone() {
   return nearest;
 }
 
+/* ========================================
+   ▲ 中央判定・選択 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ iPhone横スワイプ等で
-      中央対象を自動更新
-
-   画面を手で横に移動した場合も
-   中央にあるマイルストーンが
-   selectedMilestoneになる。
+   ▼ 横スクロール後の選択同期 ここから
 ======================================== */
 
 function setupRoadmapSelectionSync() {
@@ -854,14 +907,17 @@ function setupRoadmapSelectionSync() {
   }
 
 
-  let timer = null;
+  let timer =
+    null;
 
 
   roadmap.addEventListener(
     "scroll",
     () => {
 
-      clearTimeout(timer);
+      clearTimeout(
+        timer
+      );
 
 
       timer =
@@ -872,16 +928,8 @@ function setupRoadmapSelectionSync() {
               getNearestMilestone();
 
 
-            if (!nearest) {
-              return;
-            }
-
-
-            /*
-              ある程度中央まで来ている場合だけ
-              選択対象を同期する。
-            */
             if (
+              nearest &&
               isMilestoneCentered(
                 nearest
               )
@@ -896,27 +944,22 @@ function setupRoadmapSelectionSync() {
           },
           120
         );
+
     },
     {
-      passive: true
+      passive:
+        true
     }
   );
 }
 
+/* ========================================
+   ▲ 横スクロール後の選択同期 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ PC横ドラッグ
-
-   修正ポイント：
-
-   pointerdownした瞬間には
-   pointer captureしない。
-
-   実際に横へ7px以上動いた時だけ
-   「ドラッグ開始」とする。
-
-   これで普通のマイルストーンクリックと
-   競合しなくなる。
+   ▼ PC横ドラッグ ここから
 ======================================== */
 
 function setupRoadmapDragging() {
@@ -932,14 +975,14 @@ function setupRoadmapDragging() {
   }
 
 
-  let drag = null;
+  let drag =
+    null;
 
 
   roadmap.addEventListener(
     "pointerdown",
     event => {
 
-      /* PCマウスだけ */
       if (
         event.pointerType !==
         "mouse"
@@ -948,7 +991,6 @@ function setupRoadmapDragging() {
       }
 
 
-      /* 左クリックだけ */
       if (
         event.button !== 0
       ) {
@@ -957,7 +999,8 @@ function setupRoadmapDragging() {
 
 
       /*
-        タスクは長押し並び替えを優先。
+        タスク上は
+        タスク並び替えを優先。
       */
       if (
         event.target.closest(
@@ -968,9 +1011,6 @@ function setupRoadmapDragging() {
       }
 
 
-      /*
-        タスク追加ボタンも除外。
-      */
       if (
         event.target.closest(
           ".add-task-button"
@@ -1024,40 +1064,38 @@ function setupRoadmapDragging() {
         drag.startY;
 
 
-      /* ========================================
-         まだドラッグ開始前
-      ======================================== */
-
       if (!drag.dragging) {
 
-        /* 7px未満なら普通のクリック候補 */
+        /*
+          少し動いただけなら
+          普通のクリック。
+        */
         if (
-          Math.abs(dx) < 7
+          Math.abs(dx) <
+          7
         ) {
           return;
         }
 
 
         /*
-          縦移動の方が大きければ
-          横ドラッグにはしない。
+          縦方向の方が大きければ
+          横ドラッグにしない。
         */
         if (
           Math.abs(dy) >
           Math.abs(dx)
         ) {
 
-          drag = null;
+          drag =
+            null;
 
           return;
         }
 
 
-        /* ========================================
-           ここで初めてドラッグ開始
-        ======================================== */
-
-        drag.dragging = true;
+        drag.dragging =
+          true;
 
 
         roadmap.classList.add(
@@ -1066,10 +1104,10 @@ function setupRoadmapDragging() {
 
 
         /*
-          ここで初めてpointer capture。
+          実際にドラッグ開始してから
+          pointer capture。
 
-          PCクリックが効かなかった
-          主な競合箇所をここで修正。
+          PCクリックとの競合防止。
         */
         roadmap.setPointerCapture?.(
           event.pointerId
@@ -1103,7 +1141,9 @@ function setupRoadmapDragging() {
         drag.dragging;
 
 
-      if (wasDragging) {
+      if (
+        wasDragging
+      ) {
 
         roadmap.classList.remove(
           "is-pointer-dragging"
@@ -1123,23 +1163,18 @@ function setupRoadmapDragging() {
       }
 
 
-      drag = null;
+      drag =
+        null;
 
 
-      /*
-        単なるクリックなら終了。
-      */
       if (!wasDragging) {
         return;
       }
 
 
-      /*
-        mouseup後に発生するclickを
-        編集操作にしない。
-      */
       suppressRoadmapClickUntil =
-        Date.now() + 400;
+        Date.now() +
+        400;
 
 
       const nearest =
@@ -1168,14 +1203,22 @@ function setupRoadmapDragging() {
   );
 }
 
+/* ========================================
+   ▲ PC横ドラッグ ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ タスク長押し上下並び替え
+   ▼ タスク長押し上下移動 ここから
 
-   中央のマイルストーンだけ操作可能。
+   今回の重要修正。
 
-   iPhoneではSafariの縦スクロールを
-   タスク上で発生させない。
+   ・中央だけ操作可能
+   ・長押し約380ms
+   ・隣タスクの中央を超えて交換
+   ・交換直後に少し待つ
+   ・境界で往復する「ぶるぶる」を防ぐ
+   ・iPhoneの編集画面誤表示も防ぐ
 ======================================== */
 
 function setupTaskReordering() {
@@ -1191,7 +1234,8 @@ function setupTaskReordering() {
   }
 
 
-  let drag = null;
+  let drag =
+    null;
 
 
   /* ========================================
@@ -1214,7 +1258,9 @@ function setupTaskReordering() {
 
 
       if (
-        event.pointerType === "mouse" &&
+        event.pointerType ===
+          "mouse"
+        &&
         event.button !== 0
       ) {
         return;
@@ -1228,10 +1274,8 @@ function setupTaskReordering() {
 
 
       /*
-        中央＋選択済みではないなら
+        中央にない場合は
         並び替えを開始しない。
-
-        通常click側が中央移動を担当する。
       */
       if (
         !canEditMilestone(
@@ -1261,24 +1305,22 @@ function setupTaskReordering() {
           false,
 
         timer:
-          null
+          null,
+
+        /*
+          最後に交換した時刻。
+          連続交換のぶるぶる防止。
+        */
+        lastSwapTime:
+          0
       };
 
 
-      /*
-        タスク自身へキャプチャ。
-
-        roadmapではなくtaskなので
-        通常クリックの対象は変わらない。
-      */
       task.setPointerCapture?.(
         event.pointerId
       );
 
 
-      /*
-        約380ms長押しで開始。
-      */
       drag.timer =
         setTimeout(
           () => {
@@ -1295,7 +1337,7 @@ function setupTaskReordering() {
 
 
   /* ========================================
-     移動
+     指・マウス移動
   ======================================== */
 
   roadmap.addEventListener(
@@ -1324,8 +1366,9 @@ function setupTaskReordering() {
       /*
         長押し開始前。
 
-        少し指が揺れた程度なら許可。
-        14px以上動いたら長押しキャンセル。
+        指が14px以上動いたら
+        普通のスクロール・タップとみなし
+        長押しをキャンセル。
       */
       if (!drag.dragging) {
 
@@ -1337,7 +1380,8 @@ function setupTaskReordering() {
 
 
         if (
-          distance > 14
+          distance >
+          14
         ) {
 
           clearTimeout(
@@ -1351,7 +1395,8 @@ function setupTaskReordering() {
           );
 
 
-          drag = null;
+          drag =
+            null;
         }
 
 
@@ -1359,10 +1404,11 @@ function setupTaskReordering() {
       }
 
 
-      /* ========================================
-         並び替え中
-      ======================================== */
+      /*
+        並び替え開始後。
 
+        Safari側のスクロールを止める。
+      */
       event.preventDefault();
 
 
@@ -1413,12 +1459,26 @@ function setupTaskReordering() {
       );
 
 
-      drag = null;
+      drag =
+        null;
 
 
       if (
         wasDragging
       ) {
+
+        /*
+          Safariでpointerup後に発生する
+          clickを1回だけ無効化。
+        */
+        suppressNextTaskClick =
+          task;
+
+
+        suppressTaskClickUntil =
+          Date.now() +
+          900;
+
 
         finishTaskDrag(
           task
@@ -1440,7 +1500,7 @@ function setupTaskReordering() {
 
 
   /* ========================================
-     実際の並び替え開始
+     長押し成立
   ======================================== */
 
   function startTaskDrag(
@@ -1449,21 +1509,20 @@ function setupTaskReordering() {
 
     if (
       !drag ||
-      drag.task !== task
+      drag.task !==
+      task
     ) {
       return;
     }
 
 
-    drag.dragging = true;
+    drag.dragging =
+      true;
 
 
-    /*
-      並び替え後に編集ダイアログが
-      勝手に開くのを防ぐ。
-    */
     suppressTaskClickUntil =
-      Date.now() + 800;
+      Date.now() +
+      900;
 
 
     task.classList.add(
@@ -1471,33 +1530,49 @@ function setupTaskReordering() {
     );
 
 
-    task
-      .closest(".task-list")
-      ?.classList.add(
-        "is-reordering"
-      );
-
-
-    /*
-      iPhoneでページスクロールを停止。
-    */
     document.body.classList.add(
       "is-task-reordering"
     );
 
 
-    navigator.vibrate?.(18);
+    navigator.vibrate?.(
+      18
+    );
   }
 
 
   /* ========================================
-     上下入れ替え判定
+     入れ替え判定
+
+     隣タスクの「中央」を
+     指が明確に超えた場合だけ交換。
+
+     さらに交換後160msは
+     次の交換を禁止。
+
+     これがぶるぶる防止。
   ======================================== */
 
   function maybeSwapTask(
     state,
     pointerY
   ) {
+
+    const now =
+      performance.now();
+
+
+    /*
+      交換直後なら少し待つ。
+    */
+    if (
+      now -
+      state.lastSwapTime <
+      160
+    ) {
+      return;
+    }
+
 
     const task =
       state.task;
@@ -1540,9 +1615,9 @@ function setupTaskReordering() {
       ];
 
 
-    /* ----------------------------------------
+    /* ========================================
        下方向
-    ---------------------------------------- */
+    ======================================== */
 
     if (next) {
 
@@ -1550,13 +1625,18 @@ function setupTaskReordering() {
         next.getBoundingClientRect();
 
 
+      const center =
+        rect.top +
+        rect.height / 2;
+
+
       /*
-        次タスクへ25%以上重なったら交換。
+        タスク中央より少し下まで
+        明確に超えた時だけ交換。
       */
       if (
         pointerY >
-        rect.top +
-        rect.height * 0.25
+        center + 4
       ) {
 
         animateTaskSwap(
@@ -1564,12 +1644,22 @@ function setupTaskReordering() {
           task,
           () => {
 
-            next.after(task);
+            next.after(
+              task
+            );
 
           }
         );
 
 
+        state.lastSwapTime =
+          now;
+
+
+        /*
+          交換した位置を
+          新しいドラッグ基準にする。
+        */
         state.startY =
           pointerY;
 
@@ -1583,20 +1673,25 @@ function setupTaskReordering() {
     }
 
 
-    /* ----------------------------------------
+    /* ========================================
        上方向
-    ---------------------------------------- */
+    ======================================== */
 
     if (previous) {
 
       const rect =
-        previous.getBoundingClientRect();
+        previous
+          .getBoundingClientRect();
+
+
+      const center =
+        rect.top +
+        rect.height / 2;
 
 
       if (
         pointerY <
-        rect.bottom -
-        rect.height * 0.25
+        center - 4
       ) {
 
         animateTaskSwap(
@@ -1612,6 +1707,10 @@ function setupTaskReordering() {
         );
 
 
+        state.lastSwapTime =
+          now;
+
+
         state.startY =
           pointerY;
 
@@ -1624,19 +1723,20 @@ function setupTaskReordering() {
 }
 
 
-/* ========================================
-   ▼ ポインターキャプチャ解除
-======================================== */
-
+/*
+  pointer capture解除。
+*/
 function releaseTaskPointer(
   task,
   pointerId
 ) {
 
   if (
-    task?.hasPointerCapture?.(
-      pointerId
-    )
+    task
+      ?.hasPointerCapture
+      ?.(
+        pointerId
+      )
   ) {
 
     task.releasePointerCapture(
@@ -1646,10 +1746,10 @@ function releaseTaskPointer(
 }
 
 
-/* ========================================
-   ▼ 並び替えアニメーション
-======================================== */
-
+/*
+  周囲のタスクが
+  スッと上下へ移動する演出。
+*/
 function animateTaskSwap(
   list,
   draggedTask,
@@ -1668,8 +1768,12 @@ function animateTaskSwap(
     new Map(
       tasks.map(
         task => [
+
           task,
-          task.getBoundingClientRect().top
+
+          task
+            .getBoundingClientRect()
+            .top
         ]
       )
     );
@@ -1682,23 +1786,28 @@ function animateTaskSwap(
     task => {
 
       if (
-        task === draggedTask
+        task ===
+        draggedTask
       ) {
         return;
       }
 
 
-      const previousTop =
-        before.get(task);
+      const oldTop =
+        before.get(
+          task
+        );
 
 
-      const currentTop =
-        task.getBoundingClientRect().top;
+      const newTop =
+        task
+          .getBoundingClientRect()
+          .top;
 
 
       const distance =
-        previousTop -
-        currentTop;
+        oldTop -
+        newTop;
 
 
       if (!distance) {
@@ -1707,18 +1816,22 @@ function animateTaskSwap(
 
 
       task.animate(
+
         [
           {
             transform:
               `translateY(${distance}px)`
           },
+
           {
             transform:
               "translateY(0)"
           }
         ],
+
         {
-          duration: 240,
+          duration:
+            240,
 
           easing:
             "cubic-bezier(0.2, 0.9, 0.35, 1)"
@@ -1729,15 +1842,15 @@ function animateTaskSwap(
 }
 
 
-/* ========================================
-   ▼ タスクドロップ
-======================================== */
-
+/*
+  ドロップ完了。
+*/
 function finishTaskDrag(
   task
 ) {
 
-  task.style.transform = "";
+  task.style.transform =
+    "";
 
 
   task.classList.remove(
@@ -1750,16 +1863,6 @@ function finishTaskDrag(
   );
 
 
-  task
-    .closest(".task-list")
-    ?.classList.remove(
-      "is-reordering"
-    );
-
-
-  /*
-    ページスクロールを戻す。
-  */
   document.body.classList.remove(
     "is-task-reordering"
   );
@@ -1777,10 +1880,6 @@ function finishTaskDrag(
   );
 
 
-  /*
-    並び順が変わったので
-    current → next の流れを再計算。
-  */
   const current =
     getAllTasks().find(
       item =>
@@ -1804,18 +1903,14 @@ function finishTaskDrag(
 
 
   refreshProject({
-    animate: false,
-    center: false
+    animate:
+      false,
+
+    center:
+      false
   });
 
 
-  saveProjectState();
-
-
-  /*
-    操作したマイルストーンは
-    中央に維持。
-  */
   if (milestone) {
 
     selectMilestone(
@@ -1823,11 +1918,18 @@ function finishTaskDrag(
       false
     );
   }
+
+
+  saveProjectState();
 }
+
+/* ========================================
+   ▲ タスク長押し上下移動 ここまで
+======================================== */
 
 
 /* ========================================
-   ▼ タスク編集画面
+   ▼ タスク編集 ここから
 ======================================== */
 
 function openTaskStatusDialog(
@@ -1845,9 +1947,6 @@ function openTaskStatusDialog(
     );
 
 
-  /*
-    念のためここでも中央判定。
-  */
   if (
     !canEditMilestone(
       milestone
@@ -1960,9 +2059,7 @@ function openTaskStatusDialog(
   );
 
 
-  /* ========================================
-     名前変更・削除
-  ======================================== */
+  /* 名前変更 */
 
   const editArea =
     createElement(
@@ -2000,7 +2097,9 @@ function openTaskStatusDialog(
     () => {
 
       const name =
-        nameInput.value.trim();
+        nameInput
+          .value
+          .trim();
 
 
       if (!name) {
@@ -2014,15 +2113,15 @@ function openTaskStatusDialog(
       }
 
 
-      const nameElement =
+      const element =
         task.querySelector(
           ".task-name"
         );
 
 
-      if (nameElement) {
+      if (element) {
 
-        nameElement.textContent =
+        element.textContent =
           name;
       }
 
@@ -2030,28 +2129,27 @@ function openTaskStatusDialog(
       closeDialog();
 
 
-      animateTaskStateChange(
-        task,
-        () => {
+      refreshProject({
+        animate:
+          false,
 
-          refreshProject({
-            animate: false,
-            center: false
-          });
-
-
-          selectMilestone(
-            milestone,
-            false
-          );
+        center:
+          false
+      });
 
 
-          saveProjectState();
-        }
+      selectMilestone(
+        milestone,
+        false
       );
+
+
+      saveProjectState();
     }
   );
 
+
+  /* 削除 */
 
   const deleteButton =
     createElement(
@@ -2069,13 +2167,9 @@ function openTaskStatusDialog(
     "click",
     () => {
 
-      const name =
-        getTaskName(task);
-
-
       if (
         !window.confirm(
-          `「${name}」を削除するか？`
+          `「${getTaskName(task)}」を削除するか？`
         )
       ) {
         return;
@@ -2113,8 +2207,11 @@ function openTaskStatusDialog(
 
 
       refreshProject({
-        animate: true,
-        center: false
+        animate:
+          true,
+
+        center:
+          false
       });
 
 
@@ -2155,9 +2252,13 @@ function openTaskStatusDialog(
   });
 }
 
+/* ========================================
+   ▲ タスク編集 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ タスク状態変更ぽよん
+   ▼ タスク状態・ぽよん ここから
 ======================================== */
 
 function animateTaskStateChange(
@@ -2209,10 +2310,6 @@ function animateTaskStateChange(
 }
 
 
-/* ========================================
-   ▼ タスク状態変更
-======================================== */
-
 function changeTaskStatus(
   task,
   status
@@ -2235,7 +2332,6 @@ function changeTaskStatus(
   );
 
 
-  /* 今やってるに変更 */
   if (
     status ===
     "current"
@@ -2246,10 +2342,10 @@ function changeTaskStatus(
     );
   }
 
-
-  /* 現在タスクを完了 */
   else if (
-    status === "complete" &&
+    status ===
+      "complete"
+    &&
     wasCurrent
   ) {
 
@@ -2258,10 +2354,9 @@ function changeTaskStatus(
     );
   }
 
-
-  /* 次にやるへ変更 */
   else if (
-    status === "next"
+    status ===
+    "next"
   ) {
 
     getAllTasks()
@@ -2283,10 +2378,10 @@ function changeTaskStatus(
       );
   }
 
-
-  /* 現在タスクを未着手へ戻した */
   else if (
-    status === "future" &&
+    status ===
+      "future"
+    &&
     wasCurrent
   ) {
 
@@ -2298,7 +2393,9 @@ function changeTaskStatus(
       );
 
 
-    if (nextIncomplete) {
+    if (
+      nextIncomplete
+    ) {
 
       setFlowFromCurrent(
         nextIncomplete
@@ -2307,9 +2404,6 @@ function changeTaskStatus(
   }
 
 
-  /*
-    操作元を選択中として維持。
-  */
   selectMilestone(
     milestone,
     false
@@ -2317,15 +2411,14 @@ function changeTaskStatus(
 
 
   refreshProject({
-    animate: true,
-    center: false
+    animate:
+      true,
+
+    center:
+      false
   });
 
 
-  /*
-    タスク状態変更でカードサイズ等が
-    少し変化しても中央位置を維持。
-  */
   requestAnimationFrame(
     () => {
 
@@ -2342,10 +2435,6 @@ function changeTaskStatus(
 }
 
 
-/* ========================================
-   ▼ current / next 自動設定
-======================================== */
-
 function setFlowFromCurrent(
   currentTask
 ) {
@@ -2354,7 +2443,7 @@ function setFlowFromCurrent(
     getAllTasks();
 
 
-  const currentIndex =
+  const index =
     tasks.indexOf(
       currentTask
     );
@@ -2364,7 +2453,9 @@ function setFlowFromCurrent(
     task => {
 
       if (
-        task !== currentTask &&
+        task !==
+          currentTask
+        &&
         [
           "current",
           "next"
@@ -2391,7 +2482,7 @@ function setFlowFromCurrent(
   const next =
     tasks
       .slice(
-        currentIndex + 1
+        index + 1
       )
       .find(
         task =>
@@ -2409,10 +2500,6 @@ function setFlowFromCurrent(
   }
 }
 
-
-/* ========================================
-   ▼ current完了後に次へ
-======================================== */
 
 function advanceFromCompletedTask(
   completedTask
@@ -2467,17 +2554,15 @@ function advanceFromCompletedTask(
 }
 
 
-/* ========================================
-   ▼ タスク状態表示
-======================================== */
-
 function renderTaskStatus(
   task,
   status
 ) {
 
   const name =
-    getTaskName(task);
+    getTaskName(
+      task
+    );
 
 
   task.dataset.status =
@@ -2494,7 +2579,6 @@ function renderTaskStatus(
   task.replaceChildren();
 
 
-  /* 完了 */
   if (
     status ===
     "complete"
@@ -2525,20 +2609,25 @@ function renderTaskStatus(
   }
 
 
-  /* current / next */
   if (
-    status === "current" ||
-    status === "next"
+    status ===
+      "current"
+    ||
+    status ===
+      "next"
   ) {
 
     const isCurrent =
-      status === "current";
+      status ===
+      "current";
 
 
     task.classList.add(
       isCurrent
-        ? "task-current"
-        : "task-next"
+        ?
+        "task-current"
+        :
+        "task-next"
     );
 
 
@@ -2561,8 +2650,10 @@ function renderTaskStatus(
         "span",
         "task-badge",
         isCurrent
-          ? "今やってる"
-          : "次はこれ"
+          ?
+          "今やってる"
+          :
+          "次はこれ"
       )
     );
 
@@ -2573,8 +2664,10 @@ function renderTaskStatus(
         "span",
         "task-marker",
         isCurrent
-          ? "●"
-          : "○"
+          ?
+          "●"
+          :
+          "○"
       ),
 
       text
@@ -2585,7 +2678,6 @@ function renderTaskStatus(
   }
 
 
-  /* 未着手 */
   task.append(
 
     createElement(
@@ -2602,9 +2694,13 @@ function renderTaskStatus(
   );
 }
 
+/* ========================================
+   ▲ タスク状態・ぽよん ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ 全体更新
+   ▼ 全体進捗更新 ここから
 ======================================== */
 
 function refreshProject({
@@ -2628,9 +2724,15 @@ function refreshProject({
     requestAnimationFrame(
       () => {
 
-        centerCurrentMilestone(
-          animate
-        );
+        if (
+          selectedMilestone
+        ) {
+
+          centerMilestone(
+            selectedMilestone,
+            animate
+          );
+        }
 
       }
     );
@@ -2638,15 +2740,8 @@ function refreshProject({
 }
 
 
-/* ========================================
-   ▼ マイルストーン状態
-======================================== */
-
 function refreshMilestoneStatuses() {
 
-  /*
-    既存「今ここ」を一度削除。
-  */
   document
     .querySelectorAll(
       ".current-label"
@@ -2669,7 +2764,8 @@ function refreshMilestoneStatuses() {
 
 
       const allComplete =
-        tasks.length > 0 &&
+        tasks.length > 0
+        &&
         tasks.every(
           task =>
             getTaskStatus(task) ===
@@ -2687,11 +2783,14 @@ function refreshMilestoneStatuses() {
 
       const status =
         allComplete
-          ? "complete"
+          ?
+          "complete"
           :
           hasCurrent
-            ? "current"
-            : "future";
+            ?
+            "current"
+            :
+            "future";
 
 
       milestone.dataset.status =
@@ -2719,9 +2818,12 @@ function refreshMilestoneStatuses() {
       if (statusText) {
 
         if (
-          milestone.dataset.milestoneId ===
-          "complete" &&
-          status !== "complete"
+          milestone.dataset
+            .milestoneId ===
+            "complete"
+          &&
+          status !==
+            "complete"
         ) {
 
           statusText.textContent =
@@ -2731,20 +2833,21 @@ function refreshMilestoneStatuses() {
         else {
 
           statusText.textContent =
-            status === "complete"
-              ? "完了"
+            status ===
+              "complete"
+              ?
+              "完了"
               :
-              status === "current"
-                ? "進行中"
-                : "未着手";
+              status ===
+                "current"
+                ?
+                "進行中"
+                :
+                "未着手";
         }
       }
 
 
-      /*
-        現在マイルストーンだけ
-        「今ここ」を付ける。
-      */
       if (
         status ===
         "current"
@@ -2767,10 +2870,6 @@ function refreshMilestoneStatuses() {
   );
 }
 
-
-/* ========================================
-   ▼ 順位カラー
-======================================== */
 
 function applyMilestoneOrderColors() {
 
@@ -2802,10 +2901,6 @@ function applyMilestoneOrderColors() {
 }
 
 
-/* ========================================
-   ▼ マイルストーン間の進行線
-======================================== */
-
 function refreshRoadmapLines(
   animate
 ) {
@@ -2829,7 +2924,8 @@ function refreshRoadmapLines(
       ) => {
 
         const complete =
-          pathIsComplete &&
+          pathIsComplete
+          &&
           milestones[index]
             ?.dataset.status ===
             "complete";
@@ -2851,12 +2947,6 @@ function refreshRoadmapLines(
         );
 
 
-        line.classList.remove(
-          "is-advancing",
-          "is-retreating"
-        );
-
-
         if (
           animate &&
           complete !==
@@ -2865,18 +2955,29 @@ function refreshRoadmapLines(
 
           line.classList.add(
             complete
-              ? "is-advancing"
-              : "is-retreating"
+              ?
+              "is-advancing"
+              :
+              "is-retreating"
+          );
+
+
+          setTimeout(
+            () => {
+
+              line.classList.remove(
+                "is-advancing",
+                "is-retreating"
+              );
+
+            },
+            750
           );
         }
       }
     );
 }
 
-
-/* ========================================
-   ▼ 右側進捗パネル
-======================================== */
 
 function refreshProgressPanel() {
 
@@ -2911,7 +3012,9 @@ function refreshProgressPanel() {
         "complete"
     )
     ||
-    getMilestones().at(-1);
+    getMilestones().at(
+      -1
+    );
 
 
   const completed =
@@ -2944,7 +3047,9 @@ function refreshProgressPanel() {
     ".current-task-box strong",
     currentTask
       ?
-      getTaskName(currentTask)
+      getTaskName(
+        currentTask
+      )
       :
       "現在のタスクはありません"
   );
@@ -2954,7 +3059,9 @@ function refreshProgressPanel() {
     ".next-task-box strong",
     nextTask
       ?
-      getTaskName(nextTask)
+      getTaskName(
+        nextTask
+      )
       :
       "次のタスクはありません"
   );
@@ -2968,8 +3075,8 @@ function refreshProgressPanel() {
       )
       ?.textContent
       .trim()
-      ||
-      "完了"
+    ||
+    "完了"
   );
 
 
@@ -2998,7 +3105,6 @@ function refreshProgressPanel() {
   }
 
 
-  /* 現在マイルストーンのアイコン */
   const panelIcon =
     document.querySelector(
       ".current-milestone-icon"
@@ -3021,23 +3127,28 @@ function refreshProgressPanel() {
       sourceIcon.innerHTML;
 
 
-    const orderColor =
-      currentMilestone.style.getPropertyValue(
-        "--milestone-order-color"
-      );
+    const color =
+      currentMilestone.style
+        .getPropertyValue(
+          "--milestone-order-color"
+        );
 
 
-    if (orderColor) {
+    if (color) {
 
       panelIcon.style.color =
-        orderColor;
+        color;
     }
   }
 }
 
+/* ========================================
+   ▲ 全体進捗更新 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ タスク追加
+   ▼ タスク追加 ここから
 ======================================== */
 
 function openAddTaskDialog(
@@ -3077,7 +3188,9 @@ function openAddTaskDialog(
       () => {
 
         const name =
-          input.value.trim();
+          input
+            .value
+            .trim();
 
 
         if (!name) {
@@ -3107,8 +3220,11 @@ function openAddTaskDialog(
 
 
         refreshProject({
-          animate: false,
-          center: false
+          animate:
+            false,
+
+          center:
+            false
         });
 
 
@@ -3138,9 +3254,13 @@ function openAddTaskDialog(
   });
 }
 
+/* ========================================
+   ▲ タスク追加 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ マイルストーン追加
+   ▼ マイルストーン追加・編集 ここから
 ======================================== */
 
 function openAddMilestoneDialog() {
@@ -3182,11 +3302,15 @@ function openAddMilestoneDialog() {
       () => {
 
         const name =
-          nameInput.value.trim();
+          nameInput
+            .value
+            .trim();
 
 
         const firstTask =
-          taskInput.value.trim();
+          taskInput
+            .value
+            .trim();
 
 
         if (!name) {
@@ -3227,8 +3351,11 @@ function openAddMilestoneDialog() {
 
 
         refreshProject({
-          animate: false,
-          center: false
+          animate:
+            false,
+
+          center:
+            false
         });
 
 
@@ -3259,10 +3386,6 @@ function openAddMilestoneDialog() {
 }
 
 
-/* ========================================
-   ▼ マイルストーン編集
-======================================== */
-
 function openMilestoneEditDialog(
   milestone
 ) {
@@ -3272,10 +3395,6 @@ function openMilestoneEditDialog(
   }
 
 
-  /*
-    最終防御：
-    中央ではない場合は開かない。
-  */
   if (
     !canEditMilestone(
       milestone
@@ -3346,7 +3465,9 @@ function openMilestoneEditDialog(
     () => {
 
       const name =
-        nameInput.value.trim();
+        nameInput
+          .value
+          .trim();
 
 
       if (!name) {
@@ -3390,8 +3511,11 @@ function openMilestoneEditDialog(
 
 
       refreshProject({
-        animate: false,
-        center: false
+        animate:
+          false,
+
+        center:
+          false
       });
 
 
@@ -3406,12 +3530,9 @@ function openMilestoneEditDialog(
   );
 
 
-  /* ========================================
-     マイルストーン順番変更
-
-     ここは既存機能として残す。
-  ======================================== */
-
+  /*
+    左右並び替え。
+  */
   const reorder =
     createElement(
       "div",
@@ -3505,20 +3626,10 @@ function openMilestoneEditDialog(
 }
 
 
-/* ========================================
-   ▼ マイルストーン左右入れ替え
-======================================== */
-
 function moveMilestone(
   milestone,
   direction
 ) {
-
-  const roadmap =
-    document.getElementById(
-      "roadmap"
-    );
-
 
   const milestones =
     getMilestones();
@@ -3530,16 +3641,15 @@ function moveMilestone(
     );
 
 
-  const targetIndex =
+  const target =
     index +
     direction;
 
 
   if (
-    !roadmap ||
     index < 0 ||
-    targetIndex < 0 ||
-    targetIndex >=
+    target < 0 ||
+    target >=
       milestones.length
   ) {
     return;
@@ -3548,10 +3658,10 @@ function moveMilestone(
 
   [
     milestones[index],
-    milestones[targetIndex]
+    milestones[target]
   ] =
   [
-    milestones[targetIndex],
+    milestones[target],
     milestones[index]
   ];
 
@@ -3565,8 +3675,11 @@ function moveMilestone(
 
 
   refreshProject({
-    animate: false,
-    center: false
+    animate:
+      false,
+
+    center:
+      false
   });
 
 
@@ -3580,21 +3693,11 @@ function moveMilestone(
 }
 
 
-/* ========================================
-   ▼ 新しいマイルストーン追加
-======================================== */
-
 function appendMilestone({
   name,
   firstTask,
   iconKey
 }) {
-
-  const roadmap =
-    document.getElementById(
-      "roadmap"
-    );
-
 
   const milestones =
     getMilestones();
@@ -3603,7 +3706,8 @@ function appendMilestone({
   const goalIndex =
     milestones.findIndex(
       milestone =>
-        milestone.dataset.milestoneId ===
+        milestone.dataset
+          .milestoneId ===
         "complete"
     );
 
@@ -3619,6 +3723,7 @@ function appendMilestone({
       iconKey,
 
       tasks: [
+
         {
           name:
             firstTask,
@@ -3631,7 +3736,8 @@ function appendMilestone({
 
 
   if (
-    goalIndex >= 0
+    goalIndex >=
+    0
   ) {
 
     milestones.splice(
@@ -3654,18 +3760,16 @@ function appendMilestone({
   );
 
 
-  applyMilestoneOrderColors();
-
-
   return milestone;
 }
 
+/* ========================================
+   ▲ マイルストーン追加・編集 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ DOMのロードマップを組み直す
-
-   マイルストーンの間に必ず
-   進行線を1本ずつ入れる。
+   ▼ DOM作成 ここから
 ======================================== */
 
 function rebuildRoadmapFromMilestones(
@@ -3692,7 +3796,10 @@ function rebuildRoadmapFromMilestones(
       index
     ) => {
 
-      if (index > 0) {
+      if (
+        index >
+        0
+      ) {
 
         const line =
           createElement(
@@ -3721,10 +3828,6 @@ function rebuildRoadmapFromMilestones(
 }
 
 
-/* ========================================
-   ▼ マイルストーンDOM作成
-======================================== */
-
 function createMilestone({
   id,
   name,
@@ -3751,10 +3854,6 @@ function createMilestone({
   milestone.dataset.iconKey =
     iconKey;
 
-
-  /* ========================================
-     本体
-  ======================================== */
 
   const button =
     createElement(
@@ -3818,10 +3917,6 @@ function createMilestone({
   );
 
 
-  /* ========================================
-     タスク
-  ======================================== */
-
   const branch =
     createElement(
       "div",
@@ -3837,15 +3932,16 @@ function createMilestone({
 
 
   tasks.forEach(
-    taskData => {
+    item => {
 
       list.appendChild(
         createTask(
-          taskData.name,
-          taskData.status ||
+          item.name,
+          item.status ||
           "future"
         )
       );
+
     }
   );
 
@@ -3877,10 +3973,6 @@ function createMilestone({
   return milestone;
 }
 
-
-/* ========================================
-   ▼ タスクDOM作成
-======================================== */
 
 function createTask(
   name,
@@ -3916,9 +4008,13 @@ function createTask(
   return task;
 }
 
+/* ========================================
+   ▲ DOM作成 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ ダイアログ
+   ▼ ダイアログ共通 ここから
 ======================================== */
 
 function openDialog({
@@ -4044,10 +4140,6 @@ function openDialog({
 }
 
 
-/* ========================================
-   ▼ ダイアログ閉じる
-======================================== */
-
 function closeDialog(
   immediate = false
 ) {
@@ -4086,10 +4178,6 @@ function closeDialog(
   );
 }
 
-
-/* ========================================
-   ▼ フォーム生成
-======================================== */
 
 function createFormContent(
   field,
@@ -4133,6 +4221,7 @@ function createFormContent(
       event.preventDefault();
 
       onSubmit();
+
     }
   );
 
@@ -4140,10 +4229,6 @@ function createFormContent(
   return form;
 }
 
-
-/* ========================================
-   ▼ テキスト入力
-======================================== */
 
 function createTextInput(
   placeholder
@@ -4172,12 +4257,9 @@ function createTextInput(
 }
 
 
-/* ========================================
-   ▼ アイコン選択
-======================================== */
-
 function createIconPicker(
-  selectedKey = "compass"
+  selectedKey =
+    "compass"
 ) {
 
   const element =
@@ -4233,13 +4315,16 @@ function createIconPicker(
 
 
       input.checked =
-        key === selectedKey
+        key ===
+          selectedKey
         ||
         (
           !MILESTONE_ICONS[
             selectedKey
-          ] &&
-          index === 0
+          ]
+          &&
+          index ===
+          0
         );
 
 
@@ -4271,53 +4356,25 @@ function createIconPicker(
 
     element,
 
-    getValue: () =>
-      element
-        .querySelector(
-          "input:checked"
-        )
-        ?.value
-      ||
-      "compass"
+    getValue:
+      () =>
+        element
+          .querySelector(
+            "input:checked"
+          )
+          ?.value
+        ||
+        "compass"
   };
 }
 
-
 /* ========================================
-   ▼ 入力エラー
+   ▲ ダイアログ共通 ここまで
 ======================================== */
 
-function showInputError(
-  input,
-  message
-) {
-
-  input.setCustomValidity(
-    message
-  );
-
-
-  input.reportValidity();
-
-
-  input.addEventListener(
-    "input",
-    () => {
-
-      input.setCustomValidity(
-        ""
-      );
-
-    },
-    {
-      once: true
-    }
-  );
-}
-
 
 /* ========================================
-   ▼ 保存
+   ▼ 保存・復元 ここから
 ======================================== */
 
 function saveProjectState() {
@@ -4327,7 +4384,8 @@ function saveProjectState() {
       milestone => ({
 
         id:
-          milestone.dataset.milestoneId,
+          milestone.dataset
+            .milestoneId,
 
         name:
           milestone
@@ -4340,7 +4398,8 @@ function saveProjectState() {
           "マイルストーン",
 
         iconKey:
-          milestone.dataset.iconKey
+          milestone.dataset
+            .iconKey
           ||
           "",
 
@@ -4385,15 +4444,10 @@ function saveProjectState() {
 }
 
 
-/* ========================================
-   ▼ 保存データ読込
-
-   なければDEFAULT_PROJECT。
-======================================== */
-
 function restoreProjectState() {
 
-  let state = null;
+  let state =
+    null;
 
 
   const saved =
@@ -4415,7 +4469,8 @@ function restoreProjectState() {
       if (
         Array.isArray(
           parsed
-        ) &&
+        )
+        &&
         parsed.length
       ) {
 
@@ -4441,23 +4496,24 @@ function restoreProjectState() {
   }
 
 
-  const milestones =
+  rebuildRoadmapFromMilestones(
+
     state.map(
       item =>
         createMilestone(
           item
         )
-    );
-
-
-  rebuildRoadmapFromMilestones(
-    milestones
+    )
   );
 }
 
+/* ========================================
+   ▲ 保存・復元 ここまで
+======================================== */
+
 
 /* ========================================
-   ▼ タスク状態を初期化
+   ▼ 共通便利関数 ここから
 ======================================== */
 
 function normalizeTaskStatuses() {
@@ -4467,7 +4523,9 @@ function normalizeTaskStatuses() {
 
       renderTaskStatus(
         task,
-        getTaskStatus(task)
+        getTaskStatus(
+          task
+        )
       );
 
     }
@@ -4475,15 +4533,11 @@ function normalizeTaskStatuses() {
 }
 
 
-/* ========================================
-   ▼ ダブルクリック・選択防止
-======================================== */
-
 function setupInteractionGuards() {
 
   /*
-    PCのダブルクリック等で
-    不要な選択・拡大が発生するのを防ぐ。
+    PCダブルクリックでの
+    文字選択などを防止。
   */
   document.addEventListener(
     "dblclick",
@@ -4491,7 +4545,7 @@ function setupInteractionGuards() {
 
       if (
         event.target.closest(
-          "input, textarea"
+          "input, textarea, select"
         )
       ) {
         return;
@@ -4502,14 +4556,15 @@ function setupInteractionGuards() {
 
     },
     {
-      passive: false
+      passive:
+        false
     }
   );
 
 
   /*
-    iOS長押しのコンテキストメニューを
-    ロードマップでは出さない。
+    iPhone長押しメニューを
+    ロードマップでは表示しない。
   */
   document
     .getElementById(
@@ -4525,10 +4580,6 @@ function setupInteractionGuards() {
     );
 }
 
-
-/* ========================================
-   ▼ 便利関数
-======================================== */
 
 function getMilestones() {
 
@@ -4575,7 +4626,9 @@ function getTaskStatus(
     task.dataset.status
   ) {
 
-    return task.dataset.status;
+    return (
+      task.dataset.status
+    );
   }
 
 
@@ -4613,10 +4666,6 @@ function getTaskStatus(
 }
 
 
-/* ========================================
-   ▼ 要素作成
-======================================== */
-
 function createElement(
   tag,
   className = "",
@@ -4629,7 +4678,9 @@ function createElement(
     );
 
 
-  if (className) {
+  if (
+    className
+  ) {
 
     element.className =
       className;
@@ -4646,10 +4697,6 @@ function createElement(
   return element;
 }
 
-
-/* ========================================
-   ▼ テキスト更新
-======================================== */
 
 function setText(
   selector,
@@ -4670,22 +4717,53 @@ function setText(
 }
 
 
-/* ========================================
-   ▼ 外部から進捗再計算したい場合用
+function showInputError(
+  input,
+  message
+) {
 
-   既存互換のため残す。
-======================================== */
+  input.setCustomValidity(
+    message
+  );
 
+
+  input.reportValidity();
+
+
+  input.addEventListener(
+    "input",
+    () => {
+
+      input.setCustomValidity(
+        ""
+      );
+
+    },
+    {
+      once:
+        true
+    }
+  );
+}
+
+
+/*
+  既存互換用。
+*/
 window.refreshProjectProgress =
   () => {
 
     refreshProject({
-      animate: true,
-      center: false
+
+      animate:
+        true,
+
+      center:
+        false
     });
+
   };
 
-
 /* ========================================
-   script.js END
+   ▲ 共通便利関数 ここまで
 ======================================== */
