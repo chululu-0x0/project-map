@@ -2938,3 +2938,934 @@ button {
 /* ========================================
    ▲ 動きを減らす設定 ここまで
 ======================================== */
+
+/* =========================================================
+   Project Map v22
+   ロードマップ固定位置・タスク縦スクロール・メモUI
+========================================================= */
+
+
+/* =========================================================
+   ▼ ヘッダー
+========================================================= */
+
+.app-header {
+
+  align-items:
+    center;
+
+  gap:
+    18px;
+}
+
+
+.header-title {
+
+  flex:
+    1 1 auto;
+
+  min-width:
+    0;
+}
+
+
+#project-title {
+
+  width:
+    fit-content;
+
+  max-width:
+    100%;
+
+  cursor:
+    pointer;
+
+  white-space:
+    pre-wrap;
+
+  overflow-wrap:
+    anywhere;
+
+  text-overflow:
+    initial;
+}
+
+
+.header-actions {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-end;
+
+  gap:
+    14px;
+
+  flex-shrink:
+    0;
+}
+
+
+/* =========================================================
+   ▼ 右上の全体進捗
+========================================================= */
+
+.header-progress {
+
+  width:
+    180px;
+}
+
+
+.header-progress-top {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    12px;
+
+  margin-bottom:
+    6px;
+
+  color:
+    var(--text-soft);
+
+  font-size:
+    10px;
+
+  font-weight:
+    700;
+}
+
+
+.header-progress-top strong {
+
+  color:
+    var(--pink-dark);
+
+  font-family:
+    "M PLUS Rounded 1c",
+    sans-serif;
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+}
+
+
+/* 既存のprogress-barをそのまま利用 */
+.header-progress .progress-bar {
+
+  height:
+    7px;
+}
+
+
+/* =========================================================
+   ▲ ヘッダー
+========================================================= */
+
+
+
+/* =========================================================
+   ▼ ロードマップ全体
+========================================================= */
+
+.roadmap {
+
+  /*
+    タスクが大量になっても
+    ロードマップそのものを無限に縦長にしない。
+  */
+  height:
+    clamp(
+      520px,
+      calc(100dvh - 190px),
+      820px
+    );
+
+  /*
+    中央マイルストーンがscale(1.055)で膨らむため、
+    従来より少し下に置く。
+  */
+  padding-top:
+    66px;
+
+  padding-bottom:
+    18px;
+
+  align-items:
+    flex-start;
+
+  overflow-x:
+    auto;
+
+  overflow-y:
+    hidden;
+
+  /*
+    横はマイルストーン移動。
+    縦は子要素task-branchへ渡せるようにする。
+  */
+  touch-action:
+    pan-x pan-y;
+}
+
+
+/* =========================================================
+   ▼ 各マイルストーン
+========================================================= */
+
+.milestone {
+
+  /*
+    ロードマップ表示領域いっぱいを
+    1マイルストーンのページとして利用。
+  */
+  height:
+    calc(100% - 4px);
+
+  min-height:
+    0;
+
+  /*
+    中央になった時のscaleが
+    上下両方向へ膨らまず、
+    なるべく下方向へ広がる。
+  */
+  transform-origin:
+    top center;
+}
+
+
+/*
+  元の拡大率は維持。
+*/
+.milestone.is-selected {
+
+  transform:
+    scale(1.055);
+}
+
+
+/*
+  マイルストーン名の手動改行を維持。
+*/
+.milestone-name {
+
+  white-space:
+    pre-wrap;
+
+  overflow-wrap:
+    anywhere;
+
+  line-height:
+    1.4;
+}
+
+
+/* =========================================================
+   ▼ タスク部分だけ縦スクロール
+========================================================= */
+
+.task-branch {
+
+  /*
+    上のマイルストーンカードは動かさず、
+    その下だけスクロールさせる。
+  */
+  flex:
+    1 1 auto;
+
+  min-height:
+    0;
+
+  max-height:
+    calc(100% - 132px);
+
+  padding-bottom:
+    90px;
+
+  overflow-x:
+    visible;
+
+  overflow-y:
+    auto;
+
+  overscroll-behavior-y:
+    contain;
+
+  -webkit-overflow-scrolling:
+    touch;
+
+  touch-action:
+    pan-x pan-y;
+
+  scroll-behavior:
+    smooth;
+}
+
+
+/*
+  タスク上からでも
+  普通の縦スクロールを開始できるようにする。
+*/
+.task {
+
+  touch-action:
+    pan-x pan-y;
+
+  scroll-margin-top:
+    60px;
+
+  scroll-margin-bottom:
+    60px;
+}
+
+
+/*
+  選択して中央へ持ってきたタスク。
+  currentとは別の「見ているタスク」。
+*/
+.task.is-selected-task {
+
+  box-shadow:
+    0 0 0 4px
+    rgba(
+      242,
+      154,
+      178,
+      0.16
+    ),
+    0 7px 18px
+    rgba(
+      74,
+      72,
+      82,
+      0.10
+    );
+}
+
+
+/*
+  タスク名も手動改行を維持。
+*/
+.task-name {
+
+  white-space:
+    pre-wrap;
+
+  overflow-wrap:
+    anywhere;
+
+  word-break:
+    break-word;
+}
+
+
+/* =========================================================
+   ▲ ロードマップ
+========================================================= */
+
+
+
+/* =========================================================
+   ▼ PC タスクメモ
+========================================================= */
+
+.task-memo-panel {
+
+  min-width:
+    0;
+}
+
+
+.task-memo-card {
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    14px;
+
+  min-height:
+    280px;
+}
+
+
+.task-memo-header {
+
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    10px;
+
+  width:
+    100%;
+
+  padding:
+    0;
+
+  border:
+    0;
+
+  background:
+    transparent;
+
+  text-align:
+    left;
+
+  cursor:
+    default;
+}
+
+
+.task-memo-header > span:first-child {
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  min-width:
+    0;
+}
+
+
+.task-memo-task-name {
+
+  display:
+    block;
+
+  margin-top:
+    2px;
+
+  font-family:
+    "M PLUS Rounded 1c",
+    sans-serif;
+
+  font-size:
+    15px;
+
+  line-height:
+    1.45;
+
+  white-space:
+    pre-wrap;
+
+  overflow-wrap:
+    anywhere;
+}
+
+
+.task-memo-chevron {
+
+  display:
+    none;
+}
+
+
+.task-memo-input {
+
+  width:
+    100%;
+
+  min-height:
+    190px;
+
+  flex:
+    1 1 auto;
+
+  padding:
+    13px;
+
+  resize:
+    vertical;
+
+  border:
+    1px solid
+    var(--gray-line);
+
+  border-radius:
+    15px;
+
+  background:
+    #fffafb;
+
+  color:
+    var(--text);
+
+  line-height:
+    1.65;
+
+  outline:
+    none;
+}
+
+
+.task-memo-input:focus {
+
+  border-color:
+    var(--pink);
+
+  box-shadow:
+    0 0 0 4px
+    rgba(
+      242,
+      154,
+      178,
+      0.12
+    );
+}
+
+
+.task-memo-input:disabled {
+
+  display:
+    none;
+}
+
+
+.task-memo-empty {
+
+  margin:
+    0;
+
+  padding:
+    18px 12px;
+
+  border-radius:
+    14px;
+
+  background:
+    var(--gray-light);
+
+  color:
+    var(--text-soft);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.6;
+}
+
+
+/*
+  タスク選択中は空表示を消す。
+*/
+.task-memo-panel.has-task
+.task-memo-empty {
+
+  display:
+    none;
+}
+
+
+/* =========================================================
+   ▲ PC タスクメモ
+========================================================= */
+
+
+
+/* =========================================================
+   ▼ 複数行入力
+========================================================= */
+
+textarea.dialog-input {
+
+  min-height:
+    78px;
+
+  resize:
+    vertical;
+
+  line-height:
+    1.55;
+}
+
+
+/* =========================================================
+   ▼ タブレット以下
+========================================================= */
+
+@media (max-width: 900px) {
+
+  /*
+    スマホではメモ欄を画面下に常駐させるので、
+    その分だけ下側に余白を作る。
+  */
+  .app {
+
+    padding-bottom:
+      calc(
+        130px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+
+  .main-content {
+
+    display:
+      block;
+  }
+
+
+  .roadmap {
+
+    height:
+      calc(
+        100dvh -
+        250px
+      );
+
+    min-height:
+      430px;
+  }
+
+
+  .progress-panel {
+
+    margin-top:
+      0;
+  }
+
+
+  /*
+    スマホ：
+    メモ帳を画面下へ固定。
+  */
+  .task-memo-panel {
+
+    position:
+      fixed;
+
+    z-index:
+      80;
+
+    left:
+      14px;
+
+    right:
+      14px;
+
+    bottom:
+      max(
+        10px,
+        env(safe-area-inset-bottom)
+      );
+
+    margin:
+      0;
+  }
+
+
+  .task-memo-card {
+
+    min-height:
+      0;
+
+    gap:
+      8px;
+
+    padding:
+      13px 15px;
+
+    border-radius:
+      20px;
+
+    box-shadow:
+      0 9px 28px
+      rgba(
+        74,
+        72,
+        82,
+        0.14
+      );
+  }
+
+
+  .task-memo-header {
+
+    cursor:
+      pointer;
+  }
+
+
+  .task-memo-task-name {
+
+    max-width:
+      calc(100vw - 100px);
+
+    overflow:
+      hidden;
+
+    font-size:
+      12px;
+
+    white-space:
+      nowrap;
+
+    text-overflow:
+      ellipsis;
+  }
+
+
+  .task-memo-chevron {
+
+    display:
+      block;
+
+    padding-top:
+      6px;
+
+    color:
+      var(--text-soft);
+
+    font-size:
+      15px;
+
+    transition:
+      transform
+      0.25s
+      ease;
+  }
+
+
+  /*
+    通常時：
+    だいたい2〜3行だけ見える。
+  */
+  .task-memo-input {
+
+    min-height:
+      0;
+
+    height:
+      64px;
+
+    max-height:
+      64px;
+
+    resize:
+      none;
+
+    padding:
+      9px 11px;
+
+    font-size:
+      12px;
+
+    line-height:
+      1.45;
+
+    overflow:
+      hidden;
+
+    transition:
+      height
+      0.25s
+      ease,
+      max-height
+      0.25s
+      ease;
+  }
+
+
+  /*
+    タップで大きく展開。
+  */
+  .task-memo-panel.is-expanded
+  .task-memo-input {
+
+    height:
+      min(
+        38dvh,
+        300px
+      );
+
+    max-height:
+      min(
+        38dvh,
+        300px
+      );
+
+    overflow-y:
+      auto;
+  }
+
+
+  .task-memo-panel.is-expanded
+  .task-memo-chevron {
+
+    transform:
+      rotate(180deg);
+  }
+
+
+  .task-memo-empty {
+
+    padding:
+      9px 11px;
+
+    font-size:
+      10px;
+  }
+
+}
+
+
+/* =========================================================
+   ▼ iPhone
+========================================================= */
+
+@media (max-width: 520px) {
+
+  .app-header {
+
+    align-items:
+      flex-start;
+
+    gap:
+      8px;
+  }
+
+
+  #project-title {
+
+    font-size:
+      22px;
+
+    line-height:
+      1.25;
+  }
+
+
+  .header-actions {
+
+    gap:
+      8px;
+  }
+
+
+  .header-progress {
+
+    width:
+      92px;
+
+    padding-top:
+      3px;
+  }
+
+
+  .header-progress-top {
+
+    margin-bottom:
+      4px;
+
+    font-size:
+      8px;
+  }
+
+
+  .header-progress-top span {
+
+    display:
+      none;
+  }
+
+
+  .header-progress-top {
+
+    justify-content:
+      flex-end;
+  }
+
+
+  .header-progress-top strong {
+
+    font-size:
+      11px;
+  }
+
+
+  .project-menu-button {
+
+    width:
+      39px;
+
+    height:
+      39px;
+
+    font-size:
+      21px;
+  }
+
+
+  /*
+    マイルストーンが膨らむぶん、
+    スマホでも以前より上余白を多く取る。
+  */
+  .roadmap {
+
+    padding-top:
+      61px;
+
+    height:
+      calc(
+        100dvh -
+        235px
+      );
+
+    min-height:
+      410px;
+  }
+
+
+  .milestone {
+
+    height:
+      calc(100% - 2px);
+  }
+
+
+  .task-branch {
+
+    max-height:
+      calc(100% - 116px);
+
+    padding-bottom:
+      75px;
+  }
+
+}
+
+
+/* =========================================================
+   ▲ Project Map v22
+========================================================= */
