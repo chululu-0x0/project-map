@@ -1,5 +1,5 @@
 /* =========================================================
-   Project Map v25
+   Project Map v26
    - 既存 project-map-state-v5 と互換
    - マイルストーン横移動
    - タスク縦スクロール
@@ -759,22 +759,45 @@ function setupTaskReordering() {
     return;
   }
 
-  let gesture = null;
+  /*
+    iPhone / iPad:
+    pointerイベントではなくtouchイベントを直接使う。
+
+    通常:
+    → Safariのネイティブ縦スクロールをそのまま使う。
+
+    指を動かさず約380ms保持:
+    → 長押し成立。
+
+    長押し成立後に初めてtouchmoveをpreventDefaultし、
+    タスク並び替えへ切り替える。
+
+    これなら「スクロールしようとしただけなのに
+    並び替え判定に邪魔される」と
+    「長押し後にpointercancelで着地する」の
+    両方を避けやすい。
+  */
+
+  let touchDrag = null;
+  let mouseDrag = null;
+
+  /* =====================================================
+     Touch / iPhone
+  ===================================================== */
 
   roadmap.addEventListener(
-    "pointerdown",
+    "touchstart",
     event => {
+      if (event.touches.length !== 1) {
+        cancelTouchDrag();
+        return;
+      }
+
       const task =
         event.target.closest(".task");
 
       if (!task) {
-        return;
-      }
-
-      if (
-        event.pointerType === "mouse"
-        && event.button !== 0
-      ) {
+        cancelTouchDrag();
         return;
       }
 
@@ -782,283 +805,219 @@ function setupTaskReordering() {
         task.closest(".milestone");
 
       /*
-        並び替えは中央マイルストーンだけ。
-        ただし通常の縦スクロールは
-        中央以外のタスク列でも使える。
+        並び替え自体は中央マイルストーン限定。
+        それ以外では何もしないので、
+        普通のスクロールだけがそのまま動く。
       */
-      const canReorder =
-        canEditMilestone(milestone);
-
-      const branch =
-        task.closest(".task-branch");
-
-      if (!branch) {
+      if (!canEditMilestone(milestone)) {
+        cancelTouchDrag();
         return;
       }
 
-      gesture = {
+      const touch =
+        event.touches[0];
+
+      touchDrag = {
         task,
         milestone,
-        branch,
-        pointerId: event.pointerId,
-        pointerType: event.pointerType,
-        startX: event.clientX,
-        startY: event.clientY,
-        startScrollTop: branch.scrollTop,
-        mode: "pending",
-        canReorder,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastY: touch.clientY,
+        dragging: false,
+        cancelled: false,
         timer: null,
         lastSwapTime: 0
       };
 
-      /*
-        touch-action: pan-x にしているため、
-        横方向はブラウザへ任せられる。
-        縦方向はここで手動スクロールへ切り替える。
+      touchDrag.timer =
+        setTimeout(
+          () => {
+            if (
+              !touchDrag
+              || touchDrag.cancelled
+            ) {
+              return;
+            }
 
-        動かずに保持された場合だけ
-        reorder モードへ移る。
-      */
-      if (canReorder) {
-        gesture.timer =
-          setTimeout(
-            () => {
-              startTaskDrag();
-            },
-            event.pointerType === "touch"
-              ? 360
-              : 380
-          );
-      }
+            touchDrag.dragging =
+              true;
+
+            suppressTaskClickUntil =
+              Date.now() + 900;
+
+            touchDrag.task.classList.add(
+              "is-dragging"
+            );
+
+            document.body.classList.add(
+              "is-task-reordering"
+            );
+
+            navigator.vibrate?.(18);
+          },
+          380
+        );
+    },
+    {
+      passive: true
     }
   );
 
   roadmap.addEventListener(
-    "pointermove",
+    "touchmove",
     event => {
       if (
-        !gesture
-        || gesture.pointerId
-          !== event.pointerId
+        !touchDrag
+        || event.touches.length !== 1
       ) {
         return;
       }
 
+      const touch =
+        event.touches[0];
+
       const dx =
-        event.clientX
-        - gesture.startX;
+        touch.clientX
+        - touchDrag.startX;
 
       const dy =
-        event.clientY
-        - gesture.startY;
+        touch.clientY
+        - touchDrag.startY;
+
+      touchDrag.lastY =
+        touch.clientY;
 
       /*
-        長押し待機中。
+        長押し成立前に指が動いたら、
+        並び替え候補を解除して
+        Safariの通常スクロールへ完全に任せる。
+
+        preventDefaultはしない。
       */
-      if (gesture.mode === "pending") {
-        const absX =
-          Math.abs(dx);
-
-        const absY =
-          Math.abs(dy);
-
-        /*
-          横方向が明確なら、
-          マイルストーン横スワイプへ譲る。
-        */
+      if (!touchDrag.dragging) {
         if (
-          absX > 10
-          && absX > absY
+          Math.hypot(dx, dy) > 12
         ) {
           clearTimeout(
-            gesture.timer
+            touchDrag.timer
           );
 
-          gesture = null;
-          return;
+          touchDrag.cancelled =
+            true;
+
+          touchDrag = null;
         }
-
-        /*
-          縦へ少し動いたら長押しを諦めて、
-          その指のままタスク列スクロールへ。
-          ブラウザのnative縦スクロールではなく
-          scrollTopを直接動かす。
-        */
-        if (absY > 9) {
-          clearTimeout(
-            gesture.timer
-          );
-
-          gesture.mode =
-            "scroll";
-
-          gesture.branch.classList.add(
-            "is-touch-scrolling"
-          );
-
-          gesture.task.setPointerCapture?.(
-            event.pointerId
-          );
-        } else {
-          return;
-        }
-      }
-
-      /*
-        手動縦スクロール。
-      */
-      if (gesture.mode === "scroll") {
-        event.preventDefault();
-
-        gesture.branch.scrollTop =
-          gesture.startScrollTop - dy;
 
         return;
       }
 
       /*
-        長押し並び替え。
+        長押し成立後だけブラウザスクロールを止める。
       */
-      if (gesture.mode === "reorder") {
-        event.preventDefault();
+      event.preventDefault();
 
-        gesture.task.style.transform =
-          `translateY(${dy}px) scale(1.07)`;
+      touchDrag.task.style.transform =
+        `translateY(${dy}px) scale(1.07)`;
 
-        autoScrollTaskBranch(
-          gesture.task,
-          event.clientY
-        );
+      autoScrollTaskBranch(
+        touchDrag.task,
+        touch.clientY
+      );
 
-        maybeSwapTask(
-          gesture,
-          event.clientY
-        );
-      }
+      maybeSwapTouchTask(
+        touchDrag,
+        touch.clientY
+      );
     },
     {
       passive: false
     }
   );
 
-  const finish = event => {
-    if (
-      !gesture
-      || gesture.pointerId
-        !== event.pointerId
-    ) {
+  const finishTouch =
+    () => {
+      if (!touchDrag) {
+        return;
+      }
+
+      clearTimeout(
+        touchDrag.timer
+      );
+
+      const task =
+        touchDrag.task;
+
+      const wasDragging =
+        touchDrag.dragging;
+
+      touchDrag =
+        null;
+
+      if (!wasDragging) {
+        return;
+      }
+
+      suppressNextTaskClick =
+        task;
+
+      suppressTaskClickUntil =
+        Date.now() + 900;
+
+      finishTaskDrag(task);
+    };
+
+  roadmap.addEventListener(
+    "touchend",
+    finishTouch,
+    {
+      passive: true
+    }
+  );
+
+  roadmap.addEventListener(
+    "touchcancel",
+    () => {
+      /*
+        通常スクロールへ渡した結果のtouchcancelなら
+        何もする必要はない。
+
+        並び替え中にtouchcancelされた場合だけ
+        見た目をきちんと戻す。
+      */
+      if (
+        touchDrag
+        && touchDrag.dragging
+      ) {
+        const task =
+          touchDrag.task;
+
+        touchDrag =
+          null;
+
+        finishTaskDrag(task);
+      } else {
+        cancelTouchDrag();
+      }
+    },
+    {
+      passive: true
+    }
+  );
+
+  function cancelTouchDrag() {
+    if (!touchDrag) {
       return;
     }
 
     clearTimeout(
-      gesture.timer
+      touchDrag.timer
     );
 
-    const state =
-      gesture;
-
-    gesture = null;
-
-    if (
-      state.task.hasPointerCapture?.(
-        event.pointerId
-      )
-    ) {
-      state.task.releasePointerCapture(
-        event.pointerId
-      );
-    }
-
-    state.branch.classList.remove(
-      "is-touch-scrolling"
-    );
-
-    if (state.mode !== "reorder") {
-      return;
-    }
-
-    suppressNextTaskClick =
-      state.task;
-
-    suppressTaskClickUntil =
-      Date.now() + 800;
-
-    finishTaskDrag(
-      state.task
-    );
-  };
-
-  roadmap.addEventListener(
-    "pointerup",
-    finish
-  );
-
-  roadmap.addEventListener(
-    "pointercancel",
-    finish
-  );
-
-  function startTaskDrag() {
-    if (
-      !gesture
-      || gesture.mode !== "pending"
-      || !gesture.canReorder
-    ) {
-      return;
-    }
-
-    gesture.mode =
-      "reorder";
-
-    gesture.task.setPointerCapture?.(
-      gesture.pointerId
-    );
-
-    suppressTaskClickUntil =
-      Date.now() + 800;
-
-    gesture.task.classList.add(
-      "is-dragging"
-    );
-
-    document.body.classList.add(
-      "is-task-reordering"
-    );
-
-    navigator.vibrate?.(18);
+    touchDrag =
+      null;
   }
 
-  function autoScrollTaskBranch(
-    task,
-    pointerY
-  ) {
-    const branch =
-      task.closest(".task-branch");
-
-    if (!branch) {
-      return;
-    }
-
-    const rect =
-      branch.getBoundingClientRect();
-
-    const edge = 54;
-    const step = 10;
-
-    if (
-      pointerY <
-      rect.top + edge
-    ) {
-      branch.scrollTop -= step;
-    } else if (
-      pointerY >
-      rect.bottom - edge
-    ) {
-      branch.scrollTop += step;
-    }
-  }
-
-  function maybeSwapTask(
+  function maybeSwapTouchTask(
     state,
     pointerY
   ) {
@@ -1103,7 +1062,298 @@ function setupTaskReordering() {
       const center =
         rect.top + rect.height / 2;
 
-      if (pointerY > center + 3) {
+      if (
+        pointerY >
+        center + 2
+      ) {
+        animateTaskSwap(
+          list,
+          task,
+          () => {
+            next.after(task);
+          }
+        );
+
+        state.lastSwapTime =
+          now;
+
+        /*
+          入れ替えた位置を
+          新しいドラッグ基準にする。
+        */
+        state.startY =
+          pointerY;
+
+        task.style.transform =
+          "translateY(0) scale(1.07)";
+
+        return;
+      }
+    }
+
+    if (previous) {
+      const rect =
+        previous.getBoundingClientRect();
+
+      const center =
+        rect.top + rect.height / 2;
+
+      if (
+        pointerY <
+        center - 2
+      ) {
+        animateTaskSwap(
+          list,
+          task,
+          () => {
+            previous.before(task);
+          }
+        );
+
+        state.lastSwapTime =
+          now;
+
+        state.startY =
+          pointerY;
+
+        task.style.transform =
+          "translateY(0) scale(1.07)";
+      }
+    }
+  }
+
+  /* =====================================================
+     Mouse / PC
+  ===================================================== */
+
+  roadmap.addEventListener(
+    "pointerdown",
+    event => {
+      /*
+        touchは上のtouchイベントだけで処理。
+      */
+      if (
+        event.pointerType !== "mouse"
+      ) {
+        return;
+      }
+
+      if (event.button !== 0) {
+        return;
+      }
+
+      const task =
+        event.target.closest(".task");
+
+      if (!task) {
+        return;
+      }
+
+      const milestone =
+        task.closest(".milestone");
+
+      if (!canEditMilestone(milestone)) {
+        return;
+      }
+
+      mouseDrag = {
+        task,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        dragging: false,
+        timer: null,
+        lastSwapTime: 0
+      };
+
+      mouseDrag.timer =
+        setTimeout(
+          () => {
+            if (!mouseDrag) {
+              return;
+            }
+
+            mouseDrag.dragging =
+              true;
+
+            mouseDrag.task.setPointerCapture?.(
+              mouseDrag.pointerId
+            );
+
+            suppressTaskClickUntil =
+              Date.now() + 900;
+
+            mouseDrag.task.classList.add(
+              "is-dragging"
+            );
+
+            document.body.classList.add(
+              "is-task-reordering"
+            );
+          },
+          380
+        );
+    }
+  );
+
+  roadmap.addEventListener(
+    "pointermove",
+    event => {
+      if (
+        event.pointerType !== "mouse"
+        || !mouseDrag
+        || mouseDrag.pointerId
+          !== event.pointerId
+      ) {
+        return;
+      }
+
+      const dx =
+        event.clientX
+        - mouseDrag.startX;
+
+      const dy =
+        event.clientY
+        - mouseDrag.startY;
+
+      if (!mouseDrag.dragging) {
+        if (
+          Math.hypot(dx, dy) > 14
+        ) {
+          clearTimeout(
+            mouseDrag.timer
+          );
+
+          mouseDrag =
+            null;
+        }
+
+        return;
+      }
+
+      event.preventDefault();
+
+      mouseDrag.task.style.transform =
+        `translateY(${dy}px) scale(1.07)`;
+
+      autoScrollTaskBranch(
+        mouseDrag.task,
+        event.clientY
+      );
+
+      maybeSwapMouseTask(
+        mouseDrag,
+        event.clientY
+      );
+    }
+  );
+
+  const finishMouse =
+    event => {
+      if (
+        event.pointerType !== "mouse"
+        || !mouseDrag
+        || mouseDrag.pointerId
+          !== event.pointerId
+      ) {
+        return;
+      }
+
+      clearTimeout(
+        mouseDrag.timer
+      );
+
+      const task =
+        mouseDrag.task;
+
+      const wasDragging =
+        mouseDrag.dragging;
+
+      if (
+        task.hasPointerCapture?.(
+          event.pointerId
+        )
+      ) {
+        task.releasePointerCapture(
+          event.pointerId
+        );
+      }
+
+      mouseDrag =
+        null;
+
+      if (!wasDragging) {
+        return;
+      }
+
+      suppressNextTaskClick =
+        task;
+
+      suppressTaskClickUntil =
+        Date.now() + 900;
+
+      finishTaskDrag(task);
+    };
+
+  roadmap.addEventListener(
+    "pointerup",
+    finishMouse
+  );
+
+  roadmap.addEventListener(
+    "pointercancel",
+    finishMouse
+  );
+
+  function maybeSwapMouseTask(
+    state,
+    pointerY
+  ) {
+    const now =
+      performance.now();
+
+    if (
+      now - state.lastSwapTime < 150
+    ) {
+      return;
+    }
+
+    const task =
+      state.task;
+
+    const list =
+      task.closest(".task-list");
+
+    if (!list) {
+      return;
+    }
+
+    const siblings = [
+      ...list.querySelectorAll(
+        ":scope > .task"
+      )
+    ];
+
+    const index =
+      siblings.indexOf(task);
+
+    const previous =
+      siblings[index - 1];
+
+    const next =
+      siblings[index + 1];
+
+    if (next) {
+      const rect =
+        next.getBoundingClientRect();
+
+      const center =
+        rect.top + rect.height / 2;
+
+      if (
+        pointerY >
+        center + 3
+      ) {
         animateTaskSwap(
           list,
           task,
@@ -1132,7 +1382,10 @@ function setupTaskReordering() {
       const center =
         rect.top + rect.height / 2;
 
-      if (pointerY < center - 3) {
+      if (
+        pointerY <
+        center - 3
+      ) {
         animateTaskSwap(
           list,
           task,
@@ -1150,6 +1403,40 @@ function setupTaskReordering() {
         task.style.transform =
           "translateY(0) scale(1.07)";
       }
+    }
+  }
+
+  /* =====================================================
+     Shared auto scroll
+  ===================================================== */
+
+  function autoScrollTaskBranch(
+    task,
+    pointerY
+  ) {
+    const branch =
+      task.closest(".task-branch");
+
+    if (!branch) {
+      return;
+    }
+
+    const rect =
+      branch.getBoundingClientRect();
+
+    const edge = 54;
+    const step = 10;
+
+    if (
+      pointerY <
+      rect.top + edge
+    ) {
+      branch.scrollTop -= step;
+    } else if (
+      pointerY >
+      rect.bottom - edge
+    ) {
+      branch.scrollTop += step;
     }
   }
 }
