@@ -1,5 +1,5 @@
 /* =========================================================
-   Project Map v27
+   Project Map v28
    - 既存 project-map-state-v5 と互換
    - マイルストーン横移動
    - タスク縦スクロール
@@ -523,6 +523,10 @@ function selectTask(
   refreshTaskMemoPanel();
 }
 
+/* =========================================================
+   ▼ 選択中タスクを親マイルストーン直下へ寄せる処理 ここから
+========================================================= */
+
 function centerTask(
   task,
   smooth = true
@@ -538,14 +542,61 @@ function centerTask(
     return;
   }
 
-  const target =
-    task.offsetTop
-    - branch.clientHeight / 2
-    + task.offsetHeight / 2;
+  const list =
+    task.closest(".task-list");
+
+  if (!list) {
+    return;
+  }
+
+  const tasks = [
+    ...list.querySelectorAll(
+      ":scope > .task"
+    )
+  ];
+
+  const index =
+    tasks.indexOf(task);
+
+  /*
+    選択中タスクは、
+    親マイルストーン直下の
+    「1番目または2番目」に見える位置へ寄せる。
+
+    ・先頭タスク → 1番目
+    ・2番目以降 → ひとつ前のタスクを上に残し、
+      選択タスクを2番目にする
+
+    最後尾タスクでも同じ位置まで持ち上げられるよう、
+    CSS側でタスク列下部に余白を確保している。
+  */
+  const anchorTask =
+    index > 0
+      ? tasks[index - 1]
+      : task;
+
+  const branchRect =
+    branch.getBoundingClientRect();
+
+  const anchorRect =
+    anchorTask.getBoundingClientRect();
+
+  const anchorTopInScroll =
+    branch.scrollTop
+    + anchorRect.top
+    - branchRect.top;
+
+  const topPadding = 10;
 
   branch.scrollTo({
-    top: Math.max(0, target),
-    behavior: smooth ? "smooth" : "auto"
+    top: Math.max(
+      0,
+      anchorTopInScroll - topPadding
+    ),
+    behavior:
+      smooth
+        ? "smooth"
+        : "auto"
   });
 }
 
@@ -567,16 +618,23 @@ function isTaskCentered(task) {
   const taskRect =
     task.getBoundingClientRect();
 
-  const branchCenter =
-    branchRect.top + branchRect.height / 2;
+  /*
+    v28では「中央」ではなく
+    親マイルストーン直下の上側領域に
+    入っているかを見る。
+  */
+  const upperLimit =
+    branchRect.top + 180;
 
-  const taskCenter =
-    taskRect.top + taskRect.height / 2;
-
-  return Math.abs(
-    branchCenter - taskCenter
-  ) <= 55;
+  return (
+    taskRect.top >= branchRect.top - 8
+    && taskRect.top <= upperLimit
+  );
 }
+
+/* =========================================================
+   ▲ 選択中タスクを親マイルストーン直下へ寄せる処理 ここまで
+========================================================= */
 
 function focusMilestoneDefault(
   milestone,
