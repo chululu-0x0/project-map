@@ -1,5 +1,5 @@
 /* =========================================================
-   Project Map v23
+   Project Map v24
    - 既存 project-map-state-v5 と互換
    - マイルストーン横移動
    - タスク縦スクロール
@@ -200,15 +200,40 @@ function setupRoadmapControls() {
 
       const milestone = task.closest(".milestone");
 
+      /*
+        中央以外のタスクを選んだ時も、
+        「親だけ中央へ移動」ではなく
+        タスク自身をその場で選択状態にする。
+
+        ・親マイルストーン → 横中央へ
+        ・選んだタスク → 膨らんだ選択状態を維持
+        ・メモ → 即時切り替え
+        ・タスク → 縦中央へ
+      */
       if (!canEditMilestone(milestone)) {
-        selectMilestone(milestone, true);
+        selectMilestone(
+          milestone,
+          true,
+          false
+        );
+
+        selectTask(
+          task,
+          true
+        );
+
         return;
       }
 
-      if (
-        selectedTask !== task
-        || !isTaskCentered(task)
-      ) {
+      /*
+        1回目は選択。
+        2回目は、すでにそのタスクが選択中なら
+        縦中央判定に左右されず編集画面を開く。
+
+        smooth scrollの微妙な座標差で
+        「反応したりしなかったり」する問題を防ぐ。
+      */
+      if (selectedTask !== task) {
         selectTask(task, true);
         return;
       }
@@ -756,6 +781,10 @@ function setupTaskReordering() {
       const milestone =
         task.closest(".milestone");
 
+      /*
+        並び替えは従来通り
+        中央マイルストーン内だけ。
+      */
       if (!canEditMilestone(milestone)) {
         return;
       }
@@ -764,6 +793,7 @@ function setupTaskReordering() {
         task,
         milestone,
         pointerId: event.pointerId,
+        pointerType: event.pointerType,
         startX: event.clientX,
         startY: event.clientY,
         dragging: false,
@@ -771,10 +801,20 @@ function setupTaskReordering() {
         lastSwapTime: 0
       };
 
+      /*
+        スマホは少しだけ早めに成立させる。
+        通常のスクロールは、成立前に指が動けば
+        下のpointermoveでキャンセルされる。
+      */
       drag.timer =
-        setTimeout(() => {
-          startTaskDrag(task);
-        }, 380);
+        setTimeout(
+          () => {
+            startTaskDrag(task);
+          },
+          event.pointerType === "touch"
+            ? 340
+            : 380
+        );
     }
   );
 
@@ -798,7 +838,17 @@ function setupTaskReordering() {
         const distance =
           Math.hypot(dx, dy);
 
-        if (distance > 14) {
+        /*
+          指の微振動で長押しが失敗しにくいよう
+          touchだけ許容距離を広げる。
+          明確にスクロールした時は長押しを解除。
+        */
+        const cancelDistance =
+          drag.pointerType === "touch"
+            ? 22
+            : 14;
+
+        if (distance > cancelDistance) {
           clearTimeout(drag.timer);
           drag = null;
         }
@@ -809,12 +859,20 @@ function setupTaskReordering() {
       event.preventDefault();
 
       drag.task.style.transform =
-        `translateY(${dy}px) scale(1.04)`;
+        `translateY(${dy}px) scale(1.045)`;
+
+      autoScrollTaskBranch(
+        drag.task,
+        event.clientY
+      );
 
       maybeSwapTask(
         drag,
         event.clientY
       );
+    },
+    {
+      passive: false
     }
   );
 
@@ -834,6 +892,17 @@ function setupTaskReordering() {
     const wasDragging =
       drag.dragging;
 
+    if (
+      wasDragging
+      && task.hasPointerCapture?.(
+        event.pointerId
+      )
+    ) {
+      task.releasePointerCapture(
+        event.pointerId
+      );
+    }
+
     drag = null;
 
     if (!wasDragging) {
@@ -842,7 +911,7 @@ function setupTaskReordering() {
 
     suppressNextTaskClick = task;
     suppressTaskClickUntil =
-      Date.now() + 900;
+      Date.now() + 800;
 
     finishTaskDrag(task);
   };
@@ -867,8 +936,16 @@ function setupTaskReordering() {
 
     drag.dragging = true;
 
+    /*
+      長押し成立した瞬間からだけpointer capture。
+      それまではブラウザの通常縦スクロールを邪魔しない。
+    */
+    task.setPointerCapture?.(
+      drag.pointerId
+    );
+
     suppressTaskClickUntil =
-      Date.now() + 900;
+      Date.now() + 800;
 
     task.classList.add(
       "is-dragging"
@@ -881,6 +958,36 @@ function setupTaskReordering() {
     navigator.vibrate?.(18);
   }
 
+  function autoScrollTaskBranch(
+    task,
+    pointerY
+  ) {
+    const branch =
+      task.closest(".task-branch");
+
+    if (!branch) {
+      return;
+    }
+
+    const rect =
+      branch.getBoundingClientRect();
+
+    const edge = 54;
+    const step = 9;
+
+    if (
+      pointerY <
+      rect.top + edge
+    ) {
+      branch.scrollTop -= step;
+    } else if (
+      pointerY >
+      rect.bottom - edge
+    ) {
+      branch.scrollTop += step;
+    }
+  }
+
   function maybeSwapTask(
     state,
     pointerY
@@ -889,7 +996,7 @@ function setupTaskReordering() {
       performance.now();
 
     if (
-      now - state.lastSwapTime < 160
+      now - state.lastSwapTime < 150
     ) {
       return;
     }
@@ -926,7 +1033,7 @@ function setupTaskReordering() {
       const center =
         rect.top + rect.height / 2;
 
-      if (pointerY > center + 4) {
+      if (pointerY > center + 3) {
         animateTaskSwap(
           list,
           task,
@@ -937,8 +1044,10 @@ function setupTaskReordering() {
 
         state.lastSwapTime = now;
         state.startY = pointerY;
+
         task.style.transform =
-          "translateY(0) scale(1.04)";
+          "translateY(0) scale(1.045)";
+
         return;
       }
     }
@@ -950,7 +1059,7 @@ function setupTaskReordering() {
       const center =
         rect.top + rect.height / 2;
 
-      if (pointerY < center - 4) {
+      if (pointerY < center - 3) {
         animateTaskSwap(
           list,
           task,
@@ -961,8 +1070,9 @@ function setupTaskReordering() {
 
         state.lastSwapTime = now;
         state.startY = pointerY;
+
         task.style.transform =
-          "translateY(0) scale(1.04)";
+          "translateY(0) scale(1.045)";
       }
     }
   }
