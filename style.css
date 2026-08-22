@@ -1818,3 +1818,65 @@ textarea.dialog-input {
 /* ========================================
    ▲ ロードマップ読み込み画面 ここまで
 ======================================== */
+
+
+/* ========================================
+   ▼ クラウド同期画面 ここから
+======================================== */
+
+.cloud-sync-fields {
+  gap: 11px;
+}
+
+.cloud-sync-note {
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: var(--mint-light);
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.cloud-sync-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--mint-dark);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.cloud-sync-status-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow:
+    0 0 0 4px
+    rgba(169, 222, 210, 0.2);
+}
+
+.cloud-sync-email {
+  margin: -3px 0 1px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.cloud-logout-button {
+  margin-top: 4px;
+  color: var(--text-soft);
+}
+
+.dialog-submit:disabled,
+.dialog-secondary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* ========================================
+   ▲ クラウド同期画面 ここまで
+======================================== */
