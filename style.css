@@ -43,13 +43,18 @@
 }
 
 html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   -webkit-text-size-adjust: 100%;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }
 
 body {
+  width: 100%;
+  height: 100dvh;
   margin: 0;
-  min-height: 100vh;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: "Zen Maru Gothic", sans-serif;
@@ -86,7 +91,12 @@ button {
 }
 
 .app {
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   padding:
     max(20px, env(safe-area-inset-top))
     max(20px, env(safe-area-inset-right))
@@ -99,6 +109,7 @@ button {
 ============================== */
 
 .app-header {
+  flex: 0 0 auto;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -201,15 +212,24 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 28px;
+  width: 100%;
   max-width: 1500px;
+  flex: 1 1 auto;
+  min-height: 0;
   margin: 0 auto;
+  overflow: hidden;
 }
 
 .roadmap-section {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .roadmap-tools {
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
   margin-bottom: 8px;
@@ -229,8 +249,10 @@ button {
 
 .roadmap-frame {
   position: relative;
+  flex: 1 1 auto;
   min-width: 0;
-  height: clamp(520px, calc(100dvh - 190px), 820px);
+  min-height: 0;
+  height: auto;
   overflow: hidden;
 }
 
@@ -286,26 +308,28 @@ button {
   min-height: 0;
 
   scroll-snap-align: center;
-  transform-origin: top center;
-
-  transition:
-    transform 0.28s cubic-bezier(.2, .95, .3, 1.18),
-    filter 0.25s ease;
 }
 
 .milestone.is-selected {
-  transform: scale(1.055);
   z-index: 6;
 }
 
 /*
-  中央以外だけ、ポインターを重ねた時に
-  「跳ねる」のではなく、ふわっと少し膨らむ。
+  拡大するのはマイルストーンの「本体だけ」。
+  下に連なるタスク群は拡大しない。
+*/
+.milestone.is-selected .milestone-button {
+  transform: scale(1.055);
+}
+
+/*
+  中央以外は、マイルストーン本体へポインターを
+  重ねた時だけふわっと膨らむ。
+  タスクへ触れても親マイルストーンは膨らませない。
 */
 @media (hover: hover) and (pointer: fine) {
-  .milestone:not(.is-selected):hover {
+  .milestone:not(.is-selected) .milestone-button:hover {
     transform: scale(1.035);
-    z-index: 5;
   }
 }
 
@@ -328,7 +352,9 @@ button {
   font-family: "Zen Maru Gothic", sans-serif;
   cursor: pointer;
 
+  transform-origin: center;
   transition:
+    transform 0.28s cubic-bezier(.2, .95, .3, 1.18),
     border-color 0.25s ease,
     background-color 0.25s ease,
     box-shadow 0.25s ease;
@@ -458,7 +484,7 @@ button {
 
 .task-branch {
   position: relative;
-  width: 170px;
+  width: 198px;
 
   flex: 1 1 auto;
   min-height: 0;
@@ -498,7 +524,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  width: 100%;
+  width: 170px;
+  margin: 0 auto;
 }
 
 /* ==============================
@@ -530,10 +557,9 @@ button {
   scroll-margin-bottom: 60px;
 
   transition:
+    transform 0.24s cubic-bezier(.2, .95, .3, 1.12),
     border-color 0.2s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+    background-color 0.2s ease;
 }
 
 .task::after {
@@ -573,9 +599,18 @@ button {
 }
 
 .task.is-selected-task {
-  box-shadow:
-    0 0 0 4px rgba(242, 154, 178, 0.15),
-    0 7px 18px rgba(74, 72, 82, 0.1);
+  z-index: 4;
+  transform: scale(1.045);
+  border-color: var(--pink);
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .task:not(.is-selected-task):hover {
+    z-index: 3;
+    transform: scale(1.035);
+    box-shadow: none;
+  }
 }
 
 /* Task states */
@@ -652,8 +687,9 @@ button {
 }
 
 .add-task-button {
-  width: 100%;
-  margin-top: 10px;
+  display: block;
+  width: 170px;
+  margin: 10px auto 0;
   padding: 9px;
   border: 1px dashed var(--gray);
   border-radius: var(--radius-small);
@@ -698,11 +734,11 @@ button {
 }
 
 @keyframes task-status-pop {
-  0% { transform: scale(0.84); }
-  28% { transform: scale(1.13); }
-  51% { transform: scale(0.93); }
-  72% { transform: scale(1.07); }
-  87% { transform: scale(0.98); }
+  0% { transform: scale(0.88); }
+  30% { transform: scale(1.075); }
+  54% { transform: scale(0.965); }
+  75% { transform: scale(1.035); }
+  90% { transform: scale(0.992); }
   100% { transform: scale(1); }
 }
 
@@ -712,17 +748,18 @@ button {
 
 .task-memo-panel {
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .task-memo-card {
-  position: sticky;
-  top: 20px;
-
+  position: static;
   display: flex;
   flex-direction: column;
   gap: 14px;
 
-  min-height: 280px;
+  height: 100%;
+  min-height: 0;
   padding: 22px;
 
   border: 1px solid var(--gray-line);
@@ -813,43 +850,6 @@ button {
 .task-memo-panel.has-task .task-memo-empty {
   display: none;
 }
-
-/* ==============================
-   Legend
-============================== */
-
-.status-legend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 18px;
-
-  max-width: 1500px;
-  margin: 26px auto 0;
-  padding-top: 18px;
-
-  border-top: 1px solid var(--gray-line);
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--text-soft);
-  font-size: 11px;
-}
-
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.legend-complete { background: var(--pink); }
-.legend-current { background: var(--mint); }
-.legend-next { background: var(--yellow); }
-.legend-future { background: var(--gray); }
 
 /* ==============================
    Dialog
@@ -1159,9 +1159,6 @@ textarea.dialog-input {
     filter: brightness(0.98);
   }
 
-  .task:hover {
-    box-shadow: 0 5px 13px rgba(74, 72, 82, 0.08);
-  }
 }
 
 /* ==============================
@@ -1172,32 +1169,66 @@ textarea.dialog-input {
   .app {
     padding-left: 14px;
     padding-right: 14px;
-    padding-bottom: calc(128px + env(safe-area-inset-bottom));
+    padding-bottom: 0;
   }
 
   .main-content {
     display: block;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .roadmap-section {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
   }
 
   .roadmap-frame {
-    height: max(430px, calc(100dvh - 235px));
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
   }
 
+  /*
+    スマホのメモは画面下から生えている
+    ボトムシート風。下端まで枠を伸ばす。
+  */
   .task-memo-panel {
     position: fixed;
     z-index: 80;
-    left: 14px;
-    right: 14px;
-    bottom: max(10px, env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    overflow: visible;
+    pointer-events: none;
   }
 
   .task-memo-card {
     position: static;
+    width: 100%;
+    height: auto;
     min-height: 0;
     gap: 8px;
-    padding: 13px 15px;
-    border-radius: 20px;
-    box-shadow: 0 9px 28px rgba(74, 72, 82, 0.14);
+
+    padding:
+      13px
+      max(15px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(15px, env(safe-area-inset-left));
+
+    border-left: 1px solid var(--gray-line);
+    border-right: 1px solid var(--gray-line);
+    border-top: 1px solid var(--gray-line);
+    border-bottom: 0;
+
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -8px 28px rgba(74, 72, 82, 0.13);
+
+    pointer-events: auto;
   }
 
   .task-memo-header {
@@ -1220,12 +1251,17 @@ textarea.dialog-input {
     transition: transform 0.25s ease;
   }
 
+  /*
+    折りたたみ時は2〜3行程度。
+    枠が画面下端まで伸びるので以前より
+    同じ見た目でも無駄な下余白がない。
+  */
   .task-memo-input {
     min-height: 0;
-    height: 64px;
-    max-height: 64px;
+    height: 58px;
+    max-height: 58px;
     resize: none;
-    padding: 9px 11px;
+    padding: 8px 11px;
     font-size: 12px;
     line-height: 1.45;
     overflow: hidden;
@@ -1236,8 +1272,8 @@ textarea.dialog-input {
   }
 
   .task-memo-panel.is-expanded .task-memo-input {
-    height: min(38dvh, 300px);
-    max-height: min(38dvh, 300px);
+    height: min(40dvh, 320px);
+    max-height: min(40dvh, 320px);
     overflow-y: auto;
   }
 
@@ -1246,14 +1282,22 @@ textarea.dialog-input {
   }
 
   .task-memo-empty {
-    padding: 9px 11px;
+    padding: 8px 11px;
     font-size: 10px;
+  }
+
+  /*
+    メモシートの下へタスクをスクロールできるよう、
+    タスク列の末尾に十分な逃げを作る。
+  */
+  .task-branch {
+    padding-bottom: 118px;
   }
 }
 
 @media (max-width: 520px) {
   .app-header {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
 
   #project-title {
@@ -1278,7 +1322,6 @@ textarea.dialog-input {
   }
 
   .roadmap-frame {
-    height: max(410px, calc(100dvh - 235px));
     margin-left: -14px;
     width: calc(100% + 28px);
   }
@@ -1323,19 +1366,24 @@ textarea.dialog-input {
     height: 116px;
   }
 
+  /*
+    実カード150px + 左右12pxずつの余白。
+    選択拡大やぽよんが横で切れにくくなる。
+  */
   .task-branch {
-    width: 150px;
+    width: 174px;
     max-height: calc(100% - 116px);
-    padding-bottom: 75px;
+    padding-bottom: 118px;
+  }
+
+  .task-list,
+  .add-task-button {
+    width: 150px;
   }
 
   .task-status-options,
   .milestone-reorder-controls {
     grid-template-columns: 1fr;
-  }
-
-  .status-legend {
-    justify-content: flex-start;
   }
 }
 
@@ -1347,4 +1395,15 @@ textarea.dialog-input {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+
+/* 選択タスクは状態変化アニメーション終了後も拡大を維持 */
+.task.is-selected-task:not(.is-state-changing):not(.is-state-changed):not(.is-dragging) {
+  transform: scale(1.045);
+}
+
+/* 並び替え中だけはJSのtranslateYを優先 */
+.task.is-dragging {
+  transform-origin: center;
 }
