@@ -104,9 +104,9 @@ button {
     max(20px, env(safe-area-inset-left));
 }
 
-/* ==============================
-   Header
-============================== */
+/* ========================================
+   ▼ タイトル・全体進捗 ここから
+======================================== */
 
 .app-header {
   flex: 0 0 auto;
@@ -114,14 +114,15 @@ button {
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  max-width: 1500px;
-  margin: 0 auto 18px;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 12px;
 }
 
 .header-title {
   flex: 1 1 auto;
   min-width: 0;
-  max-width: 720px;
+  max-width: none;
 }
 
 .app-name {
@@ -138,7 +139,7 @@ button {
   max-width: 100%;
   margin: 0;
   font-family: "M PLUS Rounded 1c", sans-serif;
-  font-size: clamp(24px, 3vw, 34px);
+  font-size: clamp(22px, 2.6vw, 31px);
   font-weight: 800;
   line-height: 1.25;
   letter-spacing: -0.03em;
@@ -154,8 +155,9 @@ button {
 }
 
 .title-progress {
-  width: min(360px, 100%);
-  margin-top: 10px;
+  width: 100%;
+  margin-top: 9px;
+  padding-right: 2px;
 }
 
 .title-progress-meta {
@@ -177,7 +179,7 @@ button {
 
 .progress-bar {
   width: 100%;
-  height: 7px;
+  height: 10px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--gray-light);
@@ -192,9 +194,9 @@ button {
 }
 
 .project-menu-button {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
   border: 1px solid var(--gray-line);
   border-radius: 50%;
   background: var(--surface);
@@ -204,9 +206,13 @@ button {
   cursor: pointer;
 }
 
-/* ==============================
-   Main layout
-============================== */
+/* ========================================
+   ▲ タイトル・全体進捗 ここまで
+======================================== */
+
+/* ========================================
+   ▼ メインレイアウト ここから
+======================================== */
 
 .main-content {
   display: grid;
@@ -231,12 +237,15 @@ button {
 .roadmap-tools {
   flex: 0 0 auto;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 2px;
 }
 
 .add-milestone-button {
-  padding: 10px 15px;
+  min-height: 42px;
+  padding: 9px 14px;
   border: 1px solid #f6cfda;
   border-radius: 999px;
   background: var(--pink-light);
@@ -264,7 +273,7 @@ button {
   height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 70px 20px 16px;
+  padding: 52px 20px 16px;
   scroll-behavior: smooth;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
@@ -289,9 +298,13 @@ button {
   }
 }
 
-/* ==============================
-   Milestone
-============================== */
+/* ========================================
+   ▲ メインレイアウト ここまで
+======================================== */
+
+/* ========================================
+   ▼ マイルストーン本体 ここから
+======================================== */
 
 .milestone {
   --milestone-order-color: var(--pink);
@@ -341,9 +354,9 @@ button {
   align-items: center;
   justify-content: center;
 
-  width: 118px;
-  min-height: 118px;
-  padding: 12px;
+  width: 108px;
+  min-height: 108px;
+  padding: 10px;
 
   border: 2px solid var(--milestone-order-color);
   border-radius: var(--radius-large);
@@ -380,9 +393,9 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
-  margin-bottom: 8px;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 7px;
   border-radius: 16px;
   background: #ffffff;
   color: var(--milestone-order-color);
@@ -392,8 +405,8 @@ button {
 
 .milestone-icon svg,
 .icon-choice-preview svg {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;
@@ -402,7 +415,7 @@ button {
 }
 
 .milestone-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.4;
   text-align: center;
@@ -411,9 +424,9 @@ button {
 }
 
 .milestone-status {
-  margin-top: 7px;
+  margin-top: 5px;
   color: var(--milestone-order-color);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -435,17 +448,21 @@ button {
   white-space: nowrap;
 }
 
-/* ==============================
-   Milestone connection line
-============================== */
+/* ========================================
+   ▲ マイルストーン本体 ここまで
+======================================== */
+
+/* ========================================
+   ▼ マイルストーン接続線 ここから
+======================================== */
 
 .roadmap-line {
-  --line-y: 66px;
+  --line-y: 54px;
 
   position: relative;
   flex: 0 0 70px;
   width: 70px;
-  height: 132px;
+  height: 108px;
 }
 
 .roadmap-line::before,
@@ -478,9 +495,13 @@ button {
   transition: transform 0.7s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
-/* ==============================
-   Task branch
-============================== */
+/* ========================================
+   ▲ マイルストーン接続線 ここまで
+======================================== */
+
+/* ========================================
+   ▼ タスク列 ここから
+======================================== */
 
 .task-branch {
   position: relative;
@@ -488,7 +509,7 @@ button {
 
   flex: 1 1 auto;
   min-height: 0;
-  max-height: calc(100% - 132px);
+  max-height: calc(100% - 108px);
 
   margin-top: 0;
   padding-top: 22px;
@@ -528,9 +549,13 @@ button {
   margin: 0 auto;
 }
 
-/* ==============================
-   Task
-============================== */
+/* ========================================
+   ▲ タスク列 ここまで
+======================================== */
+
+/* ========================================
+   ▼ タスク本体 ここから
+======================================== */
 
 .task {
   position: relative;
@@ -562,21 +587,6 @@ button {
     background-color 0.2s ease;
 }
 
-.task::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  top: 100%;
-  left: 50%;
-  width: 2px;
-  height: 18px;
-  transform: translateX(-50%);
-  background: var(--gray-line);
-}
-
-.task:last-child::after {
-  display: none;
-}
 
 .task-text {
   display: flex;
@@ -620,10 +630,6 @@ button {
   background: var(--pink-light);
 }
 
-.task-complete::after {
-  width: 4px;
-  background: var(--pink);
-}
 
 .task-check {
   display: flex;
@@ -645,10 +651,6 @@ button {
   box-shadow: 0 4px 12px rgba(117, 191, 174, 0.12);
 }
 
-.task-current::after {
-  width: 3px;
-  background: var(--mint);
-}
 
 .task-current .task-marker {
   color: var(--mint-dark);
@@ -659,9 +661,6 @@ button {
   background: var(--yellow-light);
 }
 
-.task-next::after {
-  background: var(--yellow);
-}
 
 .task-next .task-marker {
   color: var(--yellow-dark);
@@ -705,7 +704,7 @@ button {
 
 .task.is-dragging {
   z-index: 30;
-  box-shadow: 0 12px 28px rgba(74, 72, 82, 0.18);
+  box-shadow: 0 7px 14px rgba(74, 72, 82, 0.16);
   transition: none;
 }
 
@@ -742,9 +741,13 @@ button {
   100% { transform: scale(1); }
 }
 
-/* ==============================
-   Task memo
-============================== */
+/* ========================================
+   ▲ タスク本体 ここまで
+======================================== */
+
+/* ========================================
+   ▼ タスクメモ ここから
+======================================== */
 
 .task-memo-panel {
   min-width: 0;
@@ -851,9 +854,13 @@ button {
   display: none;
 }
 
-/* ==============================
-   Dialog
-============================== */
+/* ========================================
+   ▲ タスクメモ ここまで
+======================================== */
+
+/* ========================================
+   ▼ 編集・追加ダイアログ ここから
+======================================== */
 
 .dialog-overlay {
   position: fixed;
@@ -1145,9 +1152,13 @@ textarea.dialog-input {
   white-space: pre-wrap;
 }
 
-/* ==============================
-   Hover
-============================== */
+/* ========================================
+   ▲ 編集・追加ダイアログ ここまで
+======================================== */
+
+/* ========================================
+   ▼ PCホバー演出 ここから
+======================================== */
 
 @media (hover: hover) {
   .project-menu-button:hover,
@@ -1161,9 +1172,13 @@ textarea.dialog-input {
 
 }
 
-/* ==============================
-   Tablet / Phone
-============================== */
+/* ========================================
+   ▲ PCホバー演出 ここまで
+======================================== */
+
+/* ========================================
+   ▼ タブレット・スマホ表示 ここから
+======================================== */
 
 @media (max-width: 900px) {
   .app {
@@ -1317,8 +1332,9 @@ textarea.dialog-input {
   }
 
   .roadmap-tools {
-    justify-content: flex-start;
-    margin-bottom: 5px;
+    justify-content: flex-end;
+    gap: 7px;
+    margin-bottom: 2px;
   }
 
   .roadmap-frame {
@@ -1327,7 +1343,7 @@ textarea.dialog-input {
   }
 
   .roadmap {
-    padding-top: 64px;
+    padding-top: 48px;
     padding-left: 22px;
     padding-right: 22px;
   }
@@ -1343,22 +1359,22 @@ textarea.dialog-input {
   }
 
   .milestone-button {
-    width: 104px;
-    min-height: 104px;
-    padding: 10px;
+    width: 94px;
+    min-height: 94px;
+    padding: 9px;
     border-radius: 19px;
   }
 
   .milestone-icon {
-    width: 44px;
-    height: 44px;
-    margin-bottom: 7px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 6px;
     border-radius: 14px;
   }
 
   .milestone-icon svg {
-    width: 31px;
-    height: 31px;
+    width: 28px;
+    height: 28px;
   }
 
   .milestone-name {
@@ -1371,10 +1387,10 @@ textarea.dialog-input {
   }
 
   .roadmap-line {
-    --line-y: 52px;
+    --line-y: 47px;
     flex-basis: 48px;
     width: 48px;
-    height: 104px;
+    height: 94px;
   }
 
   /*
@@ -1383,7 +1399,7 @@ textarea.dialog-input {
   */
   .task-branch {
     width: 184px;
-    max-height: calc(100% - 104px);
+    max-height: calc(100% - 94px);
     padding-bottom: 118px;
   }
 
@@ -1397,6 +1413,14 @@ textarea.dialog-input {
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================
+   ▲ タブレット・スマホ表示 ここまで
+======================================== */
+
+/* ========================================
+   ▼ 動きを減らす設定 ここから
+======================================== */
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1434,3 +1458,7 @@ textarea.dialog-input {
     font-size: 16px;
   }
 }
+
+/* ========================================
+   ▲ 動きを減らす設定 ここまで
+======================================== */
