@@ -1697,12 +1697,12 @@ textarea.dialog-input {
   .milestone-button {
     height: auto;
     min-height: 94px;
-    padding-bottom: 15px;
+    padding-bottom: 14px;
     overflow: visible;
   }
 
   .milestone-name {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.35;
   }
 
