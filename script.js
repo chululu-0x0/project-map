@@ -1,5 +1,5 @@
 /* =========================================================
-   Project Map v31
+   Project Map v32
    - 既存 project-map-state-v5 と互換
    - マイルストーン横移動
    - タスク縦スクロール
@@ -11,6 +11,23 @@
 
 const STORAGE_KEY = "project-map-state-v5";
 const PROJECT_TITLE_KEY = "project-map-title-v1";
+
+/* =========================================================
+   ▼ Supabaseクラウド同期設定 ここから
+========================================================= */
+
+const SUPABASE_URL =
+  "https://uknypimzdcjfsomhsgva.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_aiJnnP5qQ_naEl7Pm5vbxg_7DE9y475";
+
+let supabaseClient = null;
+let supabaseUser = null;
+
+/* =========================================================
+   ▲ Supabaseクラウド同期設定 ここまで
+========================================================= */
 
 let selectedMilestone = null;
 let selectedTask = null;
@@ -136,6 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupTaskMemoPanel();
   setupProjectMenu();
   setupTopToolButtonAnimation();
+  setupCloudSync();
 
   refreshProject({
     animate: false,
@@ -1988,59 +2006,57 @@ function changeTaskStatus(
     }
   }
 
-  /* =========================================================
-   ▼ 次の「今ここ」マイルストーンへ自動移動 ここから
-========================================================= */
+  refreshProject({
+    animate: true,
+    center: false
+  });
 
-refreshProject({
-  animate: true,
-  center: false
-});
+  /*
+    ▼ 次の「今ここ」マイルストーンへ自動移動 ここから
 
-/*
-  タスク完了によって「今ここ」が
-  次のマイルストーンへ移った場合は、
-  そのマイルストーンも自動で中央表示する。
-*/
-const currentMilestone =
-  document.querySelector(
-    '.milestone[data-status="current"]'
-  );
-
-if (
-  currentMilestone
-  && currentMilestone !== milestone
-) {
-  selectMilestone(
-    currentMilestone,
-    true,
-    true
-  );
-} else {
-  selectMilestone(
-    milestone,
-    false,
-    false
-  );
-}
-
-/* =========================================================
-   ▲ 次の「今ここ」マイルストーンへ自動移動 ここまで
-========================================================= */
-
-  const newCurrent =
-    milestone.querySelector(
-      '.task[data-status="current"]'
+    現在タスクを完了して「今ここ」が
+    次のマイルストーンへ進んだ場合だけ、
+    新しいマイルストーンを中央へ移動する。
+  */
+  const currentMilestone =
+    document.querySelector(
+      '.milestone[data-status="current"]'
     );
 
   if (
-    milestone.dataset.status === "current"
-    && newCurrent
+    currentMilestone
+    && currentMilestone !== milestone
   ) {
-    selectTask(newCurrent, true);
+    selectMilestone(
+      currentMilestone,
+      true,
+      true
+    );
   } else {
-    selectTask(task, true);
+    selectMilestone(
+      milestone,
+      false,
+      false
+    );
+
+    const newCurrent =
+      milestone.querySelector(
+        '.task[data-status="current"]'
+      );
+
+    if (
+      milestone.dataset.status === "current"
+      && newCurrent
+    ) {
+      selectTask(newCurrent, true);
+    } else {
+      selectTask(task, true);
+    }
   }
+
+  /*
+    ▲ 次の「今ここ」マイルストーンへ自動移動 ここまで
+  */
 
   saveProjectState();
 }
@@ -3475,6 +3491,15 @@ function openProjectMenu() {
       "全体一覧"
     );
 
+  const cloudSyncButton =
+    createElement(
+      "button",
+      "dialog-secondary",
+      supabaseUser
+        ? "クラウド同期（ログイン中）"
+        : "クラウド同期"
+    );
+
   const roadmapImportButton =
     createElement(
       "button",
@@ -3512,6 +3537,7 @@ function openProjectMenu() {
 
   [
     overview,
+    cloudSyncButton,
     roadmapImportButton,
     exportButton,
     importButton,
@@ -3524,6 +3550,11 @@ function openProjectMenu() {
   overview.addEventListener(
     "click",
     openProjectOverview
+  );
+
+  cloudSyncButton.addEventListener(
+    "click",
+    openCloudSyncDialog
   );
 
   roadmapImportButton.addEventListener(
@@ -3556,6 +3587,7 @@ function openProjectMenu() {
 
   wrapper.append(
     overview,
+    cloudSyncButton,
     roadmapImportButton,
     exportButton,
     importButton,
@@ -3572,6 +3604,902 @@ function openProjectMenu() {
 
 /* =========================================================
    ▼ ロードマップJSON読み込み機能 ここから
+========================================================= */
+
+/* =========================================================
+   ▼ Supabaseクラウド同期 ここから
+========================================================= */
+
+function setupCloudSync() {
+  if (
+    !window.supabase
+    || typeof window.supabase.createClient
+      !== "function"
+  ) {
+    console.warn(
+      "Supabaseライブラリを読み込めませんでした。"
+    );
+    return;
+  }
+
+  supabaseClient =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+  supabaseClient.auth
+    .getSession()
+    .then(({ data, error }) => {
+      if (error) {
+        console.warn(
+          "Supabaseセッション確認エラー",
+          error
+        );
+        return;
+      }
+
+      supabaseUser =
+        data.session?.user
+        || null;
+    });
+
+  supabaseClient.auth
+    .onAuthStateChange(
+      (_event, session) => {
+        supabaseUser =
+          session?.user
+          || null;
+      }
+    );
+}
+
+async function openCloudSyncDialog() {
+  closeDialog(true);
+
+  if (!supabaseClient) {
+    window.alert(
+      "Supabaseに接続できませんでした。インターネット接続を確認してください。"
+    );
+    return;
+  }
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient.auth
+      .getSession();
+
+  if (error) {
+    console.error(error);
+
+    window.alert(
+      "ログイン状態を確認できませんでした。"
+    );
+    return;
+  }
+
+  supabaseUser =
+    data.session?.user
+    || null;
+
+  if (supabaseUser) {
+    openCloudAccountDialog();
+  } else {
+    openCloudLoginDialog();
+  }
+}
+
+function openCloudLoginDialog() {
+  const wrapper =
+    createElement(
+      "div",
+      "dialog-fields cloud-sync-fields"
+    );
+
+  const note =
+    createElement(
+      "p",
+      "cloud-sync-note",
+      "同じアカウントでログインすると、PC・iPhone・iPadの間でProject Mapを保存・読み込みできます。"
+    );
+
+  const emailField =
+    createElement(
+      "label",
+      "dialog-field"
+    );
+
+  const emailLabel =
+    createElement(
+      "span",
+      "dialog-field-label",
+      "メールアドレス"
+    );
+
+  const emailInput =
+    document.createElement("input");
+
+  emailInput.type = "email";
+  emailInput.autocomplete = "email";
+  emailInput.className =
+    "dialog-input";
+  emailInput.placeholder =
+    "example@example.com";
+
+  emailField.append(
+    emailLabel,
+    emailInput
+  );
+
+  const passwordField =
+    createElement(
+      "label",
+      "dialog-field"
+    );
+
+  const passwordLabel =
+    createElement(
+      "span",
+      "dialog-field-label",
+      "パスワード"
+    );
+
+  const passwordInput =
+    document.createElement("input");
+
+  passwordInput.type = "password";
+  passwordInput.autocomplete =
+    "current-password";
+  passwordInput.className =
+    "dialog-input";
+  passwordInput.placeholder =
+    "6文字以上";
+
+  passwordField.append(
+    passwordLabel,
+    passwordInput
+  );
+
+  const loginButton =
+    createElement(
+      "button",
+      "dialog-submit",
+      "ログイン"
+    );
+
+  const signupButton =
+    createElement(
+      "button",
+      "dialog-secondary",
+      "新しくアカウントを作る"
+    );
+
+  loginButton.type = "button";
+  signupButton.type = "button";
+
+  loginButton.addEventListener(
+    "click",
+    async () => {
+      const email =
+        emailInput.value.trim();
+
+      const password =
+        passwordInput.value;
+
+      if (!email || !password) {
+        window.alert(
+          "メールアドレスとパスワードを入力してください。"
+        );
+        return;
+      }
+
+      setCloudButtonBusy(
+        loginButton,
+        true,
+        "ログイン中…"
+      );
+
+      const {
+        data,
+        error
+      } =
+        await supabaseClient.auth
+          .signInWithPassword({
+            email,
+            password
+          });
+
+      setCloudButtonBusy(
+        loginButton,
+        false,
+        "ログイン"
+      );
+
+      if (error) {
+        console.error(error);
+
+        window.alert(
+          getCloudAuthErrorMessage(
+            error
+          )
+        );
+        return;
+      }
+
+      supabaseUser =
+        data.user
+        || null;
+
+      closeDialog(true);
+      openCloudAccountDialog();
+    }
+  );
+
+  signupButton.addEventListener(
+    "click",
+    async () => {
+      const email =
+        emailInput.value.trim();
+
+      const password =
+        passwordInput.value;
+
+      if (!email || !password) {
+        window.alert(
+          "メールアドレスとパスワードを入力してください。"
+        );
+        return;
+      }
+
+      if (password.length < 6) {
+        window.alert(
+          "パスワードは6文字以上にしてください。"
+        );
+        return;
+      }
+
+      setCloudButtonBusy(
+        signupButton,
+        true,
+        "登録中…"
+      );
+
+      const {
+        data,
+        error
+      } =
+        await supabaseClient.auth
+          .signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo:
+                window.location.href
+                  .split("#")[0]
+            }
+          });
+
+      setCloudButtonBusy(
+        signupButton,
+        false,
+        "新しくアカウントを作る"
+      );
+
+      if (error) {
+        console.error(error);
+
+        window.alert(
+          getCloudAuthErrorMessage(
+            error
+          )
+        );
+        return;
+      }
+
+      if (data.session) {
+        supabaseUser =
+          data.user
+          || null;
+
+        window.alert(
+          "アカウントを作成してログインしました。"
+        );
+
+        closeDialog(true);
+        openCloudAccountDialog();
+      } else {
+        window.alert(
+          "確認メールを送りました。メール内のリンクを開いて登録を完了したあと、Project Mapからログインしてください。"
+        );
+      }
+    }
+  );
+
+  wrapper.append(
+    note,
+    emailField,
+    passwordField,
+    loginButton,
+    signupButton
+  );
+
+  openDialog({
+    label: "CLOUD",
+    title: "クラウド同期",
+    content: wrapper,
+    focus: emailInput
+  });
+}
+
+function openCloudAccountDialog() {
+  const wrapper =
+    createElement(
+      "div",
+      "dialog-fields cloud-sync-fields"
+    );
+
+  const status =
+    createElement(
+      "div",
+      "cloud-sync-status"
+    );
+
+  const statusDot =
+    createElement(
+      "span",
+      "cloud-sync-status-dot"
+    );
+
+  const statusText =
+    createElement(
+      "span",
+      "",
+      "ログイン中"
+    );
+
+  status.append(
+    statusDot,
+    statusText
+  );
+
+  const email =
+    createElement(
+      "p",
+      "cloud-sync-email",
+      supabaseUser?.email
+      || "Supabaseアカウント"
+    );
+
+  const note =
+    createElement(
+      "p",
+      "cloud-sync-note",
+      "端末間の取り違えを防ぐため、まずは手動同期です。「クラウドへ保存」で現在の端末を送信し、「クラウドから読み込む」でこの端末へ反映します。"
+    );
+
+  const saveButton =
+    createElement(
+      "button",
+      "dialog-submit",
+      "クラウドへ保存"
+    );
+
+  const loadButton =
+    createElement(
+      "button",
+      "dialog-secondary",
+      "クラウドから読み込む"
+    );
+
+  const logoutButton =
+    createElement(
+      "button",
+      "dialog-secondary cloud-logout-button",
+      "ログアウト"
+    );
+
+  [
+    saveButton,
+    loadButton,
+    logoutButton
+  ].forEach(button => {
+    button.type = "button";
+  });
+
+  saveButton.addEventListener(
+    "click",
+    () => {
+      saveProjectToCloud(
+        saveButton
+      );
+    }
+  );
+
+  loadButton.addEventListener(
+    "click",
+    () => {
+      loadProjectFromCloud(
+        loadButton
+      );
+    }
+  );
+
+  logoutButton.addEventListener(
+    "click",
+    async () => {
+      const {
+        error
+      } =
+        await supabaseClient.auth
+          .signOut();
+
+      if (error) {
+        console.error(error);
+
+        window.alert(
+          "ログアウトできませんでした。"
+        );
+        return;
+      }
+
+      supabaseUser = null;
+
+      closeDialog();
+
+      window.alert(
+        "ログアウトしました。"
+      );
+    }
+  );
+
+  wrapper.append(
+    status,
+    email,
+    note,
+    saveButton,
+    loadButton,
+    logoutButton
+  );
+
+  openDialog({
+    label: "CLOUD",
+    title: "クラウド同期",
+    content: wrapper
+  });
+}
+
+async function requireCloudUser() {
+  if (!supabaseClient) {
+    return null;
+  }
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient.auth
+      .getUser();
+
+  if (error) {
+    console.error(error);
+    return null;
+  }
+
+  supabaseUser =
+    data.user
+    || null;
+
+  return supabaseUser;
+}
+
+async function saveProjectToCloud(
+  button
+) {
+  const user =
+    await requireCloudUser();
+
+  if (!user) {
+    window.alert(
+      "ログイン状態を確認できませんでした。もう一度ログインしてください。"
+    );
+    return;
+  }
+
+  setCloudButtonBusy(
+    button,
+    true,
+    "保存中…"
+  );
+
+  try {
+    const {
+      data: existing,
+      error: selectError
+    } =
+      await supabaseClient
+        .from("project_data")
+        .select("id")
+        .eq(
+          "user_id",
+          user.id
+        )
+        .limit(1)
+        .maybeSingle();
+
+    if (selectError) {
+      throw selectError;
+    }
+
+    const title =
+      document
+        .getElementById(
+          "project-title"
+        )
+        ?.textContent
+        .trim()
+      || "Project Map";
+
+    const payload = {
+      user_id: user.id,
+      project_title: title,
+      project_data:
+        serializeProject(),
+      updated_at:
+        new Date()
+          .toISOString()
+    };
+
+    let saveError = null;
+
+    if (existing?.id) {
+      const {
+        error
+      } =
+        await supabaseClient
+          .from("project_data")
+          .update(payload)
+          .eq(
+            "id",
+            existing.id
+          )
+          .eq(
+            "user_id",
+            user.id
+          );
+
+      saveError = error;
+    } else {
+      const {
+        error
+      } =
+        await supabaseClient
+          .from("project_data")
+          .insert(payload);
+
+      saveError = error;
+    }
+
+    if (saveError) {
+      throw saveError;
+    }
+
+    saveProjectState();
+
+    window.alert(
+      "クラウドへ保存しました。"
+    );
+  } catch (error) {
+    console.error(
+      "クラウド保存エラー",
+      error
+    );
+
+    window.alert(
+      getCloudDataErrorMessage(
+        error,
+        "保存"
+      )
+    );
+  } finally {
+    setCloudButtonBusy(
+      button,
+      false,
+      "クラウドへ保存"
+    );
+  }
+}
+
+async function loadProjectFromCloud(
+  button
+) {
+  const user =
+    await requireCloudUser();
+
+  if (!user) {
+    window.alert(
+      "ログイン状態を確認できませんでした。もう一度ログインしてください。"
+    );
+    return;
+  }
+
+  setCloudButtonBusy(
+    button,
+    true,
+    "読み込み中…"
+  );
+
+  try {
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .from("project_data")
+        .select(
+          "project_title, project_data, updated_at"
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "updated_at",
+          {
+            ascending: false
+          }
+        )
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      window.alert(
+        "クラウドにはまだProject Mapのデータがありません。先に「クラウドへ保存」をしてください。"
+      );
+      return;
+    }
+
+    if (
+      !Array.isArray(
+        data.project_data
+      )
+      || !data.project_data.length
+    ) {
+      throw new Error(
+        "クラウドのロードマップデータが空です。"
+      );
+    }
+
+    const updatedText =
+      data.updated_at
+        ? new Date(
+            data.updated_at
+          ).toLocaleString(
+            "ja-JP"
+          )
+        : "不明";
+
+    if (
+      !window.confirm(
+        `この端末の現在の内容をクラウドの内容に置き換えます。\n\nクラウド更新日時：${updatedText}\n\nよろしいですか？`
+      )
+    ) {
+      return;
+    }
+
+    selectedMilestone = null;
+    selectedTask = null;
+
+    rebuildRoadmapFromMilestones(
+      data.project_data.map(
+        item =>
+          createMilestone(
+            normalizeMilestoneData(
+              item
+            )
+          )
+      )
+    );
+
+    if (
+      typeof data.project_title
+        === "string"
+      && data.project_title.trim()
+    ) {
+      const title =
+        data.project_title.trim();
+
+      const titleElement =
+        document.getElementById(
+          "project-title"
+        );
+
+      if (titleElement) {
+        titleElement.textContent =
+          title;
+      }
+
+      localStorage.setItem(
+        PROJECT_TITLE_KEY,
+        title
+      );
+    }
+
+    normalizeTaskStatuses();
+
+    refreshProject({
+      animate: false,
+      center: false
+    });
+
+    const initial =
+      document.querySelector(
+        '.milestone[data-status="current"]'
+      )
+      || getMilestones().find(
+        milestone =>
+          milestone.dataset.status
+            !== "complete"
+      )
+      || getMilestones()[0];
+
+    if (initial) {
+      selectMilestone(
+        initial,
+        false,
+        true
+      );
+
+      requestAnimationFrame(() => {
+        centerMilestone(
+          initial,
+          false
+        );
+
+        focusMilestoneDefault(
+          initial,
+          false
+        );
+      });
+    }
+
+    saveProjectState();
+
+    closeDialog();
+
+    window.alert(
+      "クラウドの内容をこの端末へ読み込みました。"
+    );
+  } catch (error) {
+    console.error(
+      "クラウド読み込みエラー",
+      error
+    );
+
+    window.alert(
+      getCloudDataErrorMessage(
+        error,
+        "読み込み"
+      )
+    );
+  } finally {
+    setCloudButtonBusy(
+      button,
+      false,
+      "クラウドから読み込む"
+    );
+  }
+}
+
+function setCloudButtonBusy(
+  button,
+  busy,
+  text
+) {
+  if (!button) {
+    return;
+  }
+
+  button.disabled = busy;
+  button.textContent = text;
+}
+
+function getCloudAuthErrorMessage(
+  error
+) {
+  const message =
+    String(
+      error?.message
+      || ""
+    ).toLowerCase();
+
+  if (
+    message.includes(
+      "invalid login credentials"
+    )
+  ) {
+    return "メールアドレスかパスワードが違います。";
+  }
+
+  if (
+    message.includes(
+      "email not confirmed"
+    )
+  ) {
+    return "メールアドレスの確認がまだ完了していません。確認メール内のリンクを開いてください。";
+  }
+
+  if (
+    message.includes(
+      "user already registered"
+    )
+  ) {
+    return "このメールアドレスはすでに登録されています。「ログイン」を使ってください。";
+  }
+
+  return (
+    error?.message
+    || "認証中にエラーが発生しました。"
+  );
+}
+
+function getCloudDataErrorMessage(
+  error,
+  action
+) {
+  const message =
+    String(
+      error?.message
+      || ""
+    );
+
+  const lower =
+    message.toLowerCase();
+
+  if (
+    lower.includes(
+      "permission denied"
+    )
+    || lower.includes(
+      "row-level security"
+    )
+  ) {
+    return `クラウド${action}の権限で止まりました。SupabaseのRLSポリシーを確認してください。`;
+  }
+
+  if (
+    lower.includes(
+      "schema cache"
+    )
+    || lower.includes(
+      "could not find"
+    )
+    || lower.includes(
+      "relation"
+    )
+    || lower.includes(
+      "not found"
+    )
+  ) {
+    return `クラウド${action}先のテーブルに接続できません。Supabaseで project_data がData APIから利用できる状態か確認してください。`;
+  }
+
+  return (
+    `クラウド${action}に失敗しました。\n\n`
+    + (
+      message
+      || "接続状態を確認してください。"
+    )
+  );
+}
+
+/* =========================================================
+   ▲ Supabaseクラウド同期 ここまで
 ========================================================= */
 
 function openRoadmapImportDialog() {
