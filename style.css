@@ -319,7 +319,7 @@ button {
   下に連なるタスク群は拡大しない。
 */
 .milestone.is-selected .milestone-button {
-  transform: scale(1.055);
+  transform: scale(1.09);
 }
 
 /*
@@ -329,7 +329,7 @@ button {
 */
 @media (hover: hover) and (pointer: fine) {
   .milestone:not(.is-selected) .milestone-button:hover {
-    transform: scale(1.035);
+    transform: scale(1.075);
   }
 }
 
@@ -341,9 +341,9 @@ button {
   align-items: center;
   justify-content: center;
 
-  width: 132px;
-  min-height: 132px;
-  padding: 14px;
+  width: 118px;
+  min-height: 118px;
+  padding: 12px;
 
   border: 2px solid var(--milestone-order-color);
   border-radius: var(--radius-large);
@@ -380,10 +380,10 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  margin-bottom: 10px;
-  border-radius: 18px;
+  width: 50px;
+  height: 50px;
+  margin-bottom: 8px;
+  border-radius: 16px;
   background: #ffffff;
   color: var(--milestone-order-color);
   font-size: 29px;
@@ -392,8 +392,8 @@ button {
 
 .milestone-icon svg,
 .icon-choice-preview svg {
-  width: 39px;
-  height: 39px;
+  width: 34px;
+  height: 34px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;
@@ -551,7 +551,7 @@ button {
   font-size: 12px;
   cursor: pointer;
 
-  touch-action: pan-x pan-y;
+  touch-action: pan-x;
 
   scroll-margin-top: 60px;
   scroll-margin-bottom: 60px;
@@ -600,7 +600,7 @@ button {
 
 .task.is-selected-task {
   z-index: 4;
-  transform: scale(1.045);
+  transform: scale(1.07);
   border-color: var(--pink);
   box-shadow: none;
 }
@@ -608,7 +608,7 @@ button {
 @media (hover: hover) and (pointer: fine) {
   .task:not(.is-selected-task):hover {
     z-index: 3;
-    transform: scale(1.035);
+    transform: scale(1.055);
     box-shadow: none;
   }
 }
@@ -1262,7 +1262,7 @@ textarea.dialog-input {
     max-height: 58px;
     resize: none;
     padding: 8px 11px;
-    font-size: 12px;
+    font-size: 16px;
     line-height: 1.45;
     overflow: hidden;
 
@@ -1343,27 +1343,38 @@ textarea.dialog-input {
   }
 
   .milestone-button {
-    width: 116px;
-    min-height: 116px;
-    border-radius: 21px;
+    width: 104px;
+    min-height: 104px;
+    padding: 10px;
+    border-radius: 19px;
   }
 
   .milestone-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 16px;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 7px;
+    border-radius: 14px;
   }
 
   .milestone-icon svg {
-    width: 36px;
-    height: 36px;
+    width: 31px;
+    height: 31px;
+  }
+
+  .milestone-name {
+    font-size: 13px;
+  }
+
+  .milestone-status {
+    margin-top: 5px;
+    font-size: 10px;
   }
 
   .roadmap-line {
-    --line-y: 58px;
+    --line-y: 52px;
     flex-basis: 48px;
     width: 48px;
-    height: 116px;
+    height: 104px;
   }
 
   /*
@@ -1371,8 +1382,8 @@ textarea.dialog-input {
     選択拡大やぽよんが横で切れにくくなる。
   */
   .task-branch {
-    width: 174px;
-    max-height: calc(100% - 116px);
+    width: 184px;
+    max-height: calc(100% - 104px);
     padding-bottom: 118px;
   }
 
@@ -1400,10 +1411,35 @@ textarea.dialog-input {
 
 /* 選択タスクは状態変化アニメーション終了後も拡大を維持 */
 .task.is-selected-task:not(.is-state-changing):not(.is-state-changed):not(.is-dragging) {
-  transform: scale(1.045);
+  transform: scale(1.07);
 }
 
 /* 並び替え中だけはJSのtranslateYを優先 */
 .task.is-dragging {
   transform-origin: center;
+}
+
+
+/* =========================================================
+   v25 touch interaction refinements
+========================================================= */
+
+/*
+  タスクから開始した縦スクロール中。
+  選択拡大などのtransitionを一時的に軽くし、
+  指への追従を優先。
+*/
+.task-branch.is-touch-scrolling {
+  scroll-behavior: auto;
+}
+
+/*
+  iOS Safariは16px未満の入力欄をフォーカスすると
+  自動ズームするため、スマホでは必ず16px以上。
+*/
+@media (max-width: 900px) {
+  .task-memo-input,
+  .dialog-input {
+    font-size: 16px;
+  }
 }
