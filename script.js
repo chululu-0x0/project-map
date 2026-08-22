@@ -1,5 +1,5 @@
 /* =========================================================
-   Project Map v28
+   Project Map v29
    - 既存 project-map-state-v5 と互換
    - マイルストーン横移動
    - タスク縦スクロール
@@ -135,6 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProjectTitleEditing();
   setupTaskMemoPanel();
   setupProjectMenu();
+  setupTopToolButtonAnimation();
 
   refreshProject({
     animate: false,
@@ -3346,6 +3347,55 @@ function openProjectTitleDialog() {
 
 /* =========================================================
    ▼ 全体編集メニュー・一覧・バックアップ ここから
+========================================================= */
+
+/* =========================================================
+   ▼ 上部操作ボタンの軽いぽよん演出 ここから
+========================================================= */
+
+function setupTopToolButtonAnimation() {
+  const buttons = [
+    document.getElementById(
+      "add-milestone-button"
+    ),
+    document.getElementById(
+      "project-menu-button"
+    )
+  ].filter(Boolean);
+
+  buttons.forEach(button => {
+    button.addEventListener(
+      "click",
+      () => {
+        button.classList.remove(
+          "is-tool-button-pop"
+        );
+
+        /*
+          同じボタンを連続で押しても
+          animationを毎回最初から再生する。
+        */
+        void button.offsetWidth;
+
+        button.classList.add(
+          "is-tool-button-pop"
+        );
+      }
+    );
+
+    button.addEventListener(
+      "animationend",
+      () => {
+        button.classList.remove(
+          "is-tool-button-pop"
+        );
+      }
+    );
+  });
+}
+
+/* =========================================================
+   ▲ 上部操作ボタンの軽いぽよん演出 ここまで
 ========================================================= */
 
 function setupProjectMenu() {
