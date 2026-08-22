@@ -1988,16 +1988,45 @@ function changeTaskStatus(
     }
   }
 
-  refreshProject({
-    animate: true,
-    center: false
-  });
+  /* =========================================================
+   ▼ 次の「今ここ」マイルストーンへ自動移動 ここから
+========================================================= */
 
+refreshProject({
+  animate: true,
+  center: false
+});
+
+/*
+  タスク完了によって「今ここ」が
+  次のマイルストーンへ移った場合は、
+  そのマイルストーンも自動で中央表示する。
+*/
+const currentMilestone =
+  document.querySelector(
+    '.milestone[data-status="current"]'
+  );
+
+if (
+  currentMilestone
+  && currentMilestone !== milestone
+) {
+  selectMilestone(
+    currentMilestone,
+    true,
+    true
+  );
+} else {
   selectMilestone(
     milestone,
     false,
     false
   );
+}
+
+/* =========================================================
+   ▲ 次の「今ここ」マイルストーンへ自動移動 ここまで
+========================================================= */
 
   const newCurrent =
     milestone.querySelector(
