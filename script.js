@@ -1,5 +1,5 @@
 /* =========================================================
-   Project Map v30
+   Project Map v31
    - 既存 project-map-state-v5 と互換
    - マイルストーン横移動
    - タスク縦スクロール
@@ -557,50 +557,47 @@ function centerTask(
   ];
 
   const index =
-  tasks.indexOf(task);
+    tasks.indexOf(task);
 
-/* ========================================
-   ▼ 1～2番目タスクのフォーカス制御 ここから
-======================================== */
+  /*
+    ▼ 1～2番目タスクのフォーカス制御 ここから
 
-/*
-  1番目：
-  常に位置固定。
+    1番目：
+    位置固定。
 
-  2番目：
-  すでに上へスクロールされていて
-  1番目が隠れている場合だけ、
-  タスク列を初期位置へ戻す。
+    2番目：
+    通常は位置固定。
+    3番目以降から戻ってきて
+    1番目が隠れている時だけ初期位置へ戻す。
 
-  3番目以降：
-  選択タスクが2番目あたりに来るよう
-  上へフォーカスする。
-*/
-
-if (index === 0) {
-  return;
-}
-
-if (index === 1) {
-  if (branch.scrollTop > 4) {
-    branch.scrollTo({
-      top: 0,
-      behavior:
-        smooth
-          ? "smooth"
-          : "auto"
-    });
+    3番目以降：
+    選択中タスクが2番目付近に来るよう
+    上へフォーカスする。
+  */
+  if (index === 0) {
+    return;
   }
 
-  return;
-}
+  if (index === 1) {
+    if (branch.scrollTop > 4) {
+      branch.scrollTo({
+        top: 0,
+        behavior:
+          smooth
+            ? "smooth"
+            : "auto"
+      });
+    }
 
-const anchorTask =
-  tasks[index - 1];
+    return;
+  }
 
-/* ========================================
-   ▲ 1～2番目タスクのフォーカス制御 ここまで
-======================================== */
+  const anchorTask =
+    tasks[index - 1];
+
+  /*
+    ▲ 1～2番目タスクのフォーカス制御 ここまで
+  */
 
   const branchRect =
     branch.getBoundingClientRect();
@@ -3449,6 +3446,13 @@ function openProjectMenu() {
       "全体一覧"
     );
 
+  const roadmapImportButton =
+    createElement(
+      "button",
+      "dialog-secondary",
+      "ロードマップを読み込む"
+    );
+
   const exportButton =
     createElement(
       "button",
@@ -3479,6 +3483,7 @@ function openProjectMenu() {
 
   [
     overview,
+    roadmapImportButton,
     exportButton,
     importButton,
     rename,
@@ -3490,6 +3495,11 @@ function openProjectMenu() {
   overview.addEventListener(
     "click",
     openProjectOverview
+  );
+
+  roadmapImportButton.addEventListener(
+    "click",
+    openRoadmapImportDialog
   );
 
   exportButton.addEventListener(
@@ -3517,6 +3527,7 @@ function openProjectMenu() {
 
   wrapper.append(
     overview,
+    roadmapImportButton,
     exportButton,
     importButton,
     rename,
@@ -3529,6 +3540,516 @@ function openProjectMenu() {
     content: wrapper
   });
 }
+
+/* =========================================================
+   ▼ ロードマップJSON読み込み機能 ここから
+========================================================= */
+
+function openRoadmapImportDialog() {
+  closeDialog(true);
+
+  const wrapper =
+    createElement(
+      "div",
+      "dialog-fields"
+    );
+
+  const note =
+    createElement(
+      "p",
+      "roadmap-import-note",
+      "Project Map用JSONをファイルから選ぶか、この画面に貼り付けて読み込めます。読み込み時は現在のロードマップを置き換えます。"
+    );
+
+  const fileRow =
+    createElement(
+      "div",
+      "roadmap-import-file-row"
+    );
+
+  const fileButton =
+    createElement(
+      "button",
+      "dialog-secondary roadmap-import-file-button",
+      "JSONファイルを選ぶ"
+    );
+
+  fileButton.type = "button";
+
+  const fileName =
+    createElement(
+      "span",
+      "roadmap-import-file-name",
+      "ファイル未選択"
+    );
+
+  const fileInput =
+    document.createElement("input");
+
+  fileInput.type = "file";
+  fileInput.accept =
+    "application/json,.json";
+
+  fileInput.hidden = true;
+
+  const separator =
+    createElement(
+      "div",
+      "roadmap-import-separator",
+      "または貼り付け"
+    );
+
+  const textarea =
+    document.createElement(
+      "textarea"
+    );
+
+  textarea.className =
+    "roadmap-import-textarea";
+
+  textarea.rows = 10;
+
+  textarea.placeholder =
+    `{
+  "projectTitle": "新しい企画",
+  "milestones": [
+    {
+      "name": "企画",
+      "icon": "💡",
+      "tasks": [
+        {
+          "name": "目的を決める",
+          "status": "current",
+          "memo": ""
+        }
+      ]
+    }
+  ]
+}`;
+
+  textarea.spellcheck = false;
+
+  const submit =
+    createElement(
+      "button",
+      "dialog-primary roadmap-import-submit",
+      "ロードマップを読み込む"
+    );
+
+  submit.type = "button";
+
+  fileButton.addEventListener(
+    "click",
+    () => {
+      fileInput.click();
+    }
+  );
+
+  fileInput.addEventListener(
+    "change",
+    async () => {
+      const file =
+        fileInput.files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      try {
+        const text =
+          await file.text();
+
+        textarea.value =
+          text;
+
+        fileName.textContent =
+          file.name;
+
+        textarea.focus();
+      } catch (error) {
+        console.error(error);
+
+        window.alert(
+          "ファイルを読み込めませんでした。"
+        );
+      }
+    }
+  );
+
+  submit.addEventListener(
+    "click",
+    () => {
+      importRoadmapJson(
+        textarea.value
+      );
+    }
+  );
+
+  fileRow.append(
+    fileButton,
+    fileName,
+    fileInput
+  );
+
+  wrapper.append(
+    note,
+    fileRow,
+    separator,
+    textarea,
+    submit
+  );
+
+  openDialog({
+    label: "IMPORT",
+    title: "ロードマップを読み込む",
+    content: wrapper
+  });
+}
+
+function importRoadmapJson(text) {
+  const source =
+    String(text || "").trim();
+
+  if (!source) {
+    window.alert(
+      "JSONを選択するか、貼り付けてください。"
+    );
+    return;
+  }
+
+  let parsed;
+
+  try {
+    parsed =
+      JSON.parse(source);
+  } catch (error) {
+    console.error(error);
+
+    window.alert(
+      "JSONの形式を確認してください。"
+    );
+    return;
+  }
+
+  let normalized;
+
+  try {
+    normalized =
+      normalizeRoadmapImportData(
+        parsed
+      );
+  } catch (error) {
+    console.error(error);
+
+    window.alert(
+      error.message
+      || "ロードマップの内容を確認してください。"
+    );
+    return;
+  }
+
+  if (
+    !window.confirm(
+      "現在のロードマップを読み込んだ内容に置き換えます。よろしいですか？"
+    )
+  ) {
+    return;
+  }
+
+  applyImportedRoadmap(
+    normalized
+  );
+
+  closeDialog();
+
+  window.alert(
+    "ロードマップを読み込みました。"
+  );
+}
+
+function normalizeRoadmapImportData(
+  parsed
+) {
+  const root =
+    Array.isArray(parsed)
+      ? {
+          milestones: parsed
+        }
+      : parsed;
+
+  if (
+    !root
+    || typeof root !== "object"
+  ) {
+    throw new Error(
+      "ロードマップデータが見つかりません。"
+    );
+  }
+
+  const milestones =
+    root.milestones;
+
+  if (
+    !Array.isArray(milestones)
+    || !milestones.length
+  ) {
+    throw new Error(
+      "milestones が空です。"
+    );
+  }
+
+  let currentCount = 0;
+
+  const normalizedMilestones =
+    milestones.map(
+      (milestone, milestoneIndex) => {
+        if (
+          !milestone
+          || typeof milestone
+            !== "object"
+        ) {
+          throw new Error(
+            `${milestoneIndex + 1}個目のマイルストーンを確認してください。`
+          );
+        }
+
+        const name =
+          String(
+            milestone.name
+            ?? ""
+          ).trim();
+
+        if (!name) {
+          throw new Error(
+            `${milestoneIndex + 1}個目のマイルストーン名がありません。`
+          );
+        }
+
+        const tasks =
+          Array.isArray(
+            milestone.tasks
+          )
+            ? milestone.tasks
+            : [];
+
+        const normalizedTasks =
+          tasks.map(
+            (task, taskIndex) => {
+              if (
+                !task
+                || typeof task
+                  !== "object"
+              ) {
+                throw new Error(
+                  `${name} の${taskIndex + 1}個目のタスクを確認してください。`
+                );
+              }
+
+              const taskName =
+                String(
+                  task.name
+                  ?? ""
+                ).trim();
+
+              if (!taskName) {
+                throw new Error(
+                  `${name} の${taskIndex + 1}個目のタスク名がありません。`
+                );
+              }
+
+              const status =
+                normalizeImportedTaskStatus(
+                  task.status
+                );
+
+              if (status === "current") {
+                currentCount += 1;
+              }
+
+              return {
+                name:
+                  taskName,
+
+                status,
+
+                memo:
+                  typeof task.memo
+                    === "string"
+                    ? task.memo
+                    : ""
+              };
+            }
+          );
+
+        const iconHtml =
+          typeof milestone.iconHtml
+            === "string"
+            ? milestone.iconHtml
+            : typeof milestone.icon
+              === "string"
+              ? milestone.icon
+              : "";
+
+        return {
+          id:
+            typeof milestone.id
+              === "string"
+              && milestone.id.trim()
+              ? milestone.id.trim()
+              : `milestone-${Date.now()}-${milestoneIndex}-${Math.random()
+                  .toString(36)
+                  .slice(2, 8)}`,
+
+          name,
+
+          iconKey:
+            typeof milestone.iconKey
+              === "string"
+              ? milestone.iconKey
+              : "",
+
+          iconHtml,
+
+          tasks:
+            normalizedTasks
+        };
+      }
+    );
+
+  if (currentCount > 1) {
+    throw new Error(
+      "「今やってる（current）」タスクは1つまでにしてください。"
+    );
+  }
+
+  return {
+    projectTitle:
+      typeof root.projectTitle
+        === "string"
+        ? root.projectTitle.trim()
+        : "",
+
+    milestones:
+      normalizedMilestones
+  };
+}
+
+function normalizeImportedTaskStatus(
+  value
+) {
+  const raw =
+    String(
+      value
+      ?? "future"
+    )
+      .trim()
+      .toLowerCase();
+
+  const map = {
+    complete: "complete",
+    completed: "complete",
+    done: "complete",
+    "完了": "complete",
+
+    current: "current",
+    doing: "current",
+    "進行中": "current",
+    "今やってる": "current",
+
+    next: "next",
+    "次": "next",
+    "次にやる": "next",
+
+    future: "future",
+    todo: "future",
+    "未着手": "future",
+    "今後": "future"
+  };
+
+  return (
+    map[raw]
+    || "future"
+  );
+}
+
+function applyImportedRoadmap(
+  data
+) {
+  selectedMilestone = null;
+  selectedTask = null;
+
+  rebuildRoadmapFromMilestones(
+    data.milestones.map(
+      item =>
+        createMilestone(
+          normalizeMilestoneData(
+            item
+          )
+        )
+    )
+  );
+
+  if (data.projectTitle) {
+    const title =
+      document.getElementById(
+        "project-title"
+      );
+
+    if (title) {
+      title.textContent =
+        data.projectTitle;
+    }
+
+    localStorage.setItem(
+      PROJECT_TITLE_KEY,
+      data.projectTitle
+    );
+  }
+
+  normalizeTaskStatuses();
+
+  refreshProject({
+    animate: false,
+    center: false
+  });
+
+  const initial =
+    document.querySelector(
+      '.milestone[data-status="current"]'
+    )
+    || getMilestones().find(
+      milestone =>
+        milestone.dataset.status
+          !== "complete"
+    )
+    || getMilestones()[0];
+
+  if (initial) {
+    selectMilestone(
+      initial,
+      false,
+      true
+    );
+
+    requestAnimationFrame(() => {
+      centerMilestone(
+        initial,
+        false
+      );
+
+      focusMilestoneDefault(
+        initial,
+        false
+      );
+    });
+  }
+
+  saveProjectState();
+}
+
+/* =========================================================
+   ▲ ロードマップJSON読み込み機能 ここまで
+========================================================= */
 
 function openProjectOverview() {
   closeDialog(true);
