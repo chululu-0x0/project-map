@@ -356,8 +356,9 @@ button {
 
   width: 108px;
   min-height: 108px;
-  height: max-content;
-  padding: 10px 10px 11px;
+  height: auto;
+  padding: 10px 10px 14px;
+  overflow: visible;
 
   border: 2px solid var(--milestone-order-color);
   border-radius: var(--radius-large);
@@ -428,16 +429,16 @@ button {
 .milestone-name {
   width: 100%;
   min-height: 1.4em;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.35;
   text-align: center;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .milestone-status {
-  margin-top: 5px;
+  margin-top: 7px;
   color: var(--milestone-order-color);
   font-size: 10px;
   font-weight: 700;
@@ -1359,8 +1360,9 @@ textarea.dialog-input {
   .milestone-button {
     width: 94px;
     min-height: 94px;
-    height: max-content;
-    padding: 9px 9px 10px;
+    height: auto;
+    padding: 9px 9px 15px;
+    overflow: visible;
     border-radius: 19px;
   }
 
@@ -1384,12 +1386,14 @@ textarea.dialog-input {
   }
 
   .milestone-name {
-    font-size: 13px;
+    font-size: 11px;
+    line-height: 1.35;
   }
 
   .milestone-status {
-    margin-top: 5px;
-    font-size: 10px;
+    margin-top: 7px;
+    font-size: 9px;
+    line-height: 1.35;
   }
 
   .roadmap-line {
@@ -1557,6 +1561,7 @@ textarea.dialog-input {
   flex: 0 0 auto;
   width: 100%;
   min-height: 0;
+  height: auto;
   margin: 0;
   line-height: 1.35;
 }
@@ -1571,6 +1576,7 @@ textarea.dialog-input {
   flex: 0 0 auto;
   width: 100%;
   min-height: 1.35em;
+  height: auto;
   margin: 7px 0 0;
   line-height: 1.35;
   text-align: center;
@@ -1650,3 +1656,64 @@ textarea.dialog-input {
 /* ========================================
    ▲ マイルストーン追加・全体編集ボタン演出 ここまで
 ======================================== */
+
+
+/* ========================================
+   ▼ v30 マイルストーン可変高さの最終調整 ここから
+======================================== */
+
+/*
+  基本サイズは正方形。
+  名前が2行以上になった場合は、
+  内容量に応じて本体だけ下方向へ伸びる。
+*/
+.milestone-button {
+  height: auto;
+  min-height: 108px;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+/*
+  名前と状態文字はどちらも
+  固定高さを持たず、内容に合わせて伸びる。
+*/
+.milestone-name,
+.milestone-status {
+  height: auto;
+  flex-shrink: 0;
+}
+
+/* ========================================
+   ▲ v30 マイルストーン可変高さの最終調整 ここまで
+======================================== */
+
+
+@media (max-width: 520px) {
+  /* ========================================
+     ▼ スマホのマイルストーン余白調整 ここから
+  ======================================== */
+
+  .milestone-button {
+    height: auto;
+    min-height: 94px;
+    padding-bottom: 15px;
+    overflow: visible;
+  }
+
+  .milestone-name {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .milestone-status {
+    margin-top: 7px;
+    margin-bottom: 0;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  /* ========================================
+     ▲ スマホのマイルストーン余白調整 ここまで
+  ======================================== */
+}
