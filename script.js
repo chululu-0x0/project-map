@@ -6,7 +6,21 @@ const STORAGE_KEY =
   "project-map-state-v5";
 
 
+const PROJECT_TITLE_KEY =
+  "project-map-title-v1";
+
+
 let selectedMilestone =
+  null;
+
+
+/*
+  「現在タスク」とは別。
+
+  ユーザーが現在見ている、
+  中央選択中のタスク。
+*/
+let selectedTask =
   null;
 
 
@@ -372,12 +386,21 @@ document.addEventListener(
 
     setupRoadmapDragging();
 
-    setupRoadmapSelectionSync();
+setupRoadmapSelectionSync();
 
-    setupInteractionGuards();
+setupInteractionGuards();
+
+/*
+  v22追加
+*/
+setupProjectTitleEditing();
+
+setupTaskMemoPanel();
+
+setupProjectMenu();
 
 
-    refreshProject({
+refreshProject({
       animate:
         false,
 
@@ -520,12 +543,6 @@ function setupRoadmapControls() {
 
       if (task) {
 
-        /*
-          iPhoneのドラッグ終了後に
-          遅れて発生したclick。
-
-          同じタスクなら1回だけ完全無視。
-        */
         if (
           suppressNextTaskClick ===
           task
@@ -552,6 +569,11 @@ function setupRoadmapControls() {
           );
 
 
+        /*
+          まず親マイルストーンが
+          中央でなければ、
+          マイルストーンを中央へ。
+        */
         if (
           !canEditMilestone(
             milestone
@@ -567,6 +589,38 @@ function setupRoadmapControls() {
         }
 
 
+        /*
+          親マイルストーンが中央でも、
+          このタスク自身がまだ
+          選択されていなければ
+
+          1回目：
+          タスクを縦中央へ。
+
+          メモもこの時点で切り替える。
+        */
+        if (
+          selectedTask !== task
+          ||
+          !isTaskCentered(
+            task
+          )
+        ) {
+
+          selectTask(
+            task,
+            true
+          );
+
+          return;
+        }
+
+
+        /*
+          すでに選択＋中央。
+
+          ここで初めて編集画面。
+        */
         openTaskStatusDialog(
           task
         );
@@ -585,9 +639,7 @@ function setupRoadmapControls() {
         );
 
 
-      if (
-        addTaskButton
-      ) {
+      if (addTaskButton) {
 
         const milestone =
           addTaskButton.closest(
@@ -628,9 +680,7 @@ function setupRoadmapControls() {
         );
 
 
-      if (
-        milestoneButton
-      ) {
+      if (milestoneButton) {
 
         const milestone =
           milestoneButton.closest(
@@ -759,6 +809,11 @@ function selectMilestone(
   }
 
 
+  const changed =
+    selectedMilestone !==
+    milestone;
+
+
   getMilestones().forEach(
     item => {
 
@@ -768,6 +823,44 @@ function selectMilestone(
 
     }
   );
+
+
+  milestone.classList.add(
+    "is-selected"
+  );
+
+
+  selectedMilestone =
+    milestone;
+
+
+  if (center) {
+
+    centerMilestone(
+      milestone,
+      true
+    );
+  }
+
+
+  /*
+    別のマイルストーンへ移った時だけ
+    縦方向の表示を切り替える。
+  */
+  if (changed) {
+
+    requestAnimationFrame(
+      () => {
+
+        focusMilestoneDefault(
+          milestone,
+          true
+        );
+
+      }
+    );
+  }
+}
 
 
   milestone.classList.add(
@@ -797,6 +890,263 @@ function centerMilestone(
   if (!milestone) {
     return;
   }
+
+
+/* ========================================
+   ▼ v22 タスク選択・縦中央
+======================================== */
+
+function clearSelectedTask() {
+
+  document
+    .querySelectorAll(
+      ".task.is-selected-task"
+    )
+    .forEach(
+      task => {
+
+        task.classList.remove(
+          "is-selected-task"
+        );
+
+      }
+    );
+
+
+  selectedTask =
+    null;
+
+
+  refreshTaskMemoPanel();
+}
+
+
+function selectTask(
+  task,
+  center = true
+) {
+
+  if (!task) {
+
+    clearSelectedTask();
+
+    return;
+  }
+
+
+  document
+    .querySelectorAll(
+      ".task.is-selected-task"
+    )
+    .forEach(
+      item => {
+
+        item.classList.remove(
+          "is-selected-task"
+        );
+
+      }
+    );
+
+
+  task.classList.add(
+    "is-selected-task"
+  );
+
+
+  selectedTask =
+    task;
+
+
+  if (center) {
+
+    centerTask(
+      task,
+      true
+    );
+  }
+
+
+  refreshTaskMemoPanel();
+}
+
+
+function centerTask(
+  task,
+  smooth = true
+) {
+
+  if (!task) {
+    return;
+  }
+
+
+  const branch =
+    task.closest(
+      ".task-branch"
+    );
+
+
+  if (!branch) {
+    return;
+  }
+
+
+  /*
+    scrollIntoViewだと
+    横方向のロードマップまで
+    一緒に動く場合がある。
+
+    なので縦scrollTopだけを
+    直接計算する。
+  */
+  const target =
+    task.offsetTop
+    -
+    branch.clientHeight / 2
+    +
+    task.offsetHeight / 2;
+
+
+  branch.scrollTo({
+
+    top:
+      Math.max(
+        0,
+        target
+      ),
+
+    behavior:
+      smooth
+        ?
+        "smooth"
+        :
+        "auto"
+  });
+}
+
+
+function isTaskCentered(
+  task
+) {
+
+  if (!task) {
+    return false;
+  }
+
+
+  const branch =
+    task.closest(
+      ".task-branch"
+    );
+
+
+  if (!branch) {
+    return false;
+  }
+
+
+  const branchRect =
+    branch
+      .getBoundingClientRect();
+
+
+  const taskRect =
+    task
+      .getBoundingClientRect();
+
+
+  const branchCenter =
+    branchRect.top
+    +
+    branchRect.height / 2;
+
+
+  const taskCenter =
+    taskRect.top
+    +
+    taskRect.height / 2;
+
+
+  return (
+    Math.abs(
+      branchCenter -
+      taskCenter
+    )
+    <= 55
+  );
+}
+
+
+/*
+  マイルストーンを横移動した時の
+  初期縦位置。
+
+  現在地：
+  → currentタスクを中央。
+
+  その他：
+  → マイルストーンを見せ、
+     タスクは先頭。
+*/
+function focusMilestoneDefault(
+  milestone,
+  smooth = true
+) {
+
+  if (!milestone) {
+    return;
+  }
+
+
+  const branch =
+    milestone.querySelector(
+      ".task-branch"
+    );
+
+
+  const currentTask =
+    milestone.querySelector(
+      '.task[data-status="current"]'
+    );
+
+
+  if (
+    milestone.dataset.status ===
+      "current"
+    &&
+    currentTask
+  ) {
+
+    selectTask(
+      currentTask,
+      smooth
+    );
+
+    return;
+  }
+
+
+  clearSelectedTask();
+
+
+  branch?.scrollTo({
+
+    top:
+      0,
+
+    behavior:
+      smooth
+        ?
+        "smooth"
+        :
+        "auto"
+  });
+}
+
+/* ========================================
+   ▲ v22 タスク選択・縦中央
+======================================== */ 
 
 
   milestone.scrollIntoView({
@@ -2703,318 +3053,10 @@ function renderTaskStatus(
    ▼ 全体進捗更新 ここから
 ======================================== */
 
-function refreshProject({
-  animate = true,
-  center = false
-} = {}) {
-
-  refreshMilestoneStatuses();
-
-  applyMilestoneOrderColors();
-
-  refreshRoadmapLines(
-    animate
-  );
-
-  refreshProgressPanel();
-
-
-  if (center) {
-
-    requestAnimationFrame(
-      () => {
-
-        if (
-          selectedMilestone
-        ) {
-
-          centerMilestone(
-            selectedMilestone,
-            animate
-          );
-        }
-
-      }
-    );
-  }
-}
-
-
-function refreshMilestoneStatuses() {
-
-  document
-    .querySelectorAll(
-      ".current-label"
-    )
-    .forEach(
-      label =>
-        label.remove()
-    );
-
-
-  getMilestones().forEach(
-    milestone => {
-
-      const tasks =
-        [
-          ...milestone.querySelectorAll(
-            ".task"
-          )
-        ];
-
-
-      const allComplete =
-        tasks.length > 0
-        &&
-        tasks.every(
-          task =>
-            getTaskStatus(task) ===
-            "complete"
-        );
-
-
-      const hasCurrent =
-        tasks.some(
-          task =>
-            getTaskStatus(task) ===
-            "current"
-        );
-
-
-      const status =
-        allComplete
-          ?
-          "complete"
-          :
-          hasCurrent
-            ?
-            "current"
-            :
-            "future";
-
-
-      milestone.dataset.status =
-        status;
-
-
-      milestone.classList.remove(
-        "milestone-complete",
-        "milestone-current",
-        "milestone-future"
-      );
-
-
-      milestone.classList.add(
-        `milestone-${status}`
-      );
-
-
-      const statusText =
-        milestone.querySelector(
-          ".milestone-status"
-        );
-
-
-      if (statusText) {
-
-        if (
-          milestone.dataset
-            .milestoneId ===
-            "complete"
-          &&
-          status !==
-            "complete"
-        ) {
-
-          statusText.textContent =
-            "ゴール";
-        }
-
-        else {
-
-          statusText.textContent =
-            status ===
-              "complete"
-              ?
-              "完了"
-              :
-              status ===
-                "current"
-                ?
-                "進行中"
-                :
-                "未着手";
-        }
-      }
-
-
-      if (
-        status ===
-        "current"
-      ) {
-
-        milestone.insertBefore(
-
-          createElement(
-            "div",
-            "current-label",
-            "今ここ"
-          ),
-
-          milestone.querySelector(
-            ".milestone-button"
-          )
-        );
-      }
-    }
-  );
-}
-
-
-function applyMilestoneOrderColors() {
-
-  getMilestones().forEach(
-    (
-      milestone,
-      index
-    ) => {
-
-      const color =
-        MILESTONE_ORDER_COLORS[
-          index %
-          MILESTONE_ORDER_COLORS.length
-        ];
-
-
-      milestone.style.setProperty(
-        "--milestone-order-color",
-        color.main
-      );
-
-
-      milestone.style.setProperty(
-        "--milestone-order-soft",
-        color.soft
-      );
-    }
-  );
-}
-
-
-function refreshRoadmapLines(
-  animate
-) {
-
-  const milestones =
-    getMilestones();
-
-
-  let pathIsComplete =
-    true;
-
-
-  document
-    .querySelectorAll(
-      ".roadmap-line"
-    )
-    .forEach(
-      (
-        line,
-        index
-      ) => {
-
-        const complete =
-          pathIsComplete
-          &&
-          milestones[index]
-            ?.dataset.status ===
-            "complete";
-
-
-        pathIsComplete =
-          complete;
-
-
-        const wasComplete =
-          line.classList.contains(
-            "is-complete"
-          );
-
-
-        line.classList.toggle(
-          "is-complete",
-          complete
-        );
-
-
-        if (
-          animate &&
-          complete !==
-          wasComplete
-        ) {
-
-          line.classList.add(
-            complete
-              ?
-              "is-advancing"
-              :
-              "is-retreating"
-          );
-
-
-          setTimeout(
-            () => {
-
-              line.classList.remove(
-                "is-advancing",
-                "is-retreating"
-              );
-
-            },
-            750
-          );
-        }
-      }
-    );
-}
-
-
 function refreshProgressPanel() {
 
   const tasks =
     getAllTasks();
-
-
-  const currentTask =
-    tasks.find(
-      task =>
-        getTaskStatus(task) ===
-        "current"
-    );
-
-
-  const nextTask =
-    tasks.find(
-      task =>
-        getTaskStatus(task) ===
-        "next"
-    );
-
-
-  const currentMilestone =
-    document.querySelector(
-      '.milestone[data-status="current"]'
-    )
-    ||
-    getMilestones().find(
-      milestone =>
-        milestone.dataset.status !==
-        "complete"
-    )
-    ||
-    getMilestones().at(
-      -1
-    );
 
 
   const completed =
@@ -3043,43 +3085,6 @@ function refreshProgressPanel() {
   );
 
 
-  setText(
-    ".current-task-box strong",
-    currentTask
-      ?
-      getTaskName(
-        currentTask
-      )
-      :
-      "現在のタスクはありません"
-  );
-
-
-  setText(
-    ".next-task-box strong",
-    nextTask
-      ?
-      getTaskName(
-        nextTask
-      )
-      :
-      "次のタスクはありません"
-  );
-
-
-  setText(
-    ".current-milestone strong",
-    currentMilestone
-      ?.querySelector(
-        ".milestone-name"
-      )
-      ?.textContent
-      .trim()
-    ||
-    "完了"
-  );
-
-
   const progressBar =
     document.querySelector(
       ".progress-bar"
@@ -3105,41 +3110,11 @@ function refreshProgressPanel() {
   }
 
 
-  const panelIcon =
-    document.querySelector(
-      ".current-milestone-icon"
-    );
-
-
-  const sourceIcon =
-    currentMilestone
-      ?.querySelector(
-        ".milestone-icon"
-      );
-
-
-  if (
-    panelIcon &&
-    sourceIcon
-  ) {
-
-    panelIcon.innerHTML =
-      sourceIcon.innerHTML;
-
-
-    const color =
-      currentMilestone.style
-        .getPropertyValue(
-          "--milestone-order-color"
-        );
-
-
-    if (color) {
-
-      panelIcon.style.color =
-        color;
-    }
-  }
+  /*
+    状態変更などで再描画した時も
+    メモ表示を同期。
+  */
+  refreshTaskMemoPanel();
 }
 
 /* ========================================
@@ -3932,18 +3907,20 @@ function createMilestone({
 
 
   tasks.forEach(
-    item => {
+  item => {
 
-      list.appendChild(
-        createTask(
-          item.name,
-          item.status ||
-          "future"
-        )
-      );
+    list.appendChild(
+      createTask(
+        item.name,
+        item.status ||
+        "future",
+        item.memo ||
+        ""
+      )
+    );
 
-    }
-  );
+  }
+);
 
 
   const addButton =
@@ -3976,8 +3953,51 @@ function createMilestone({
 
 function createTask(
   name,
-  status = "future"
+  status = "future",
+  memo = ""
 ) {
+
+  const task =
+    createElement(
+      "div",
+      "task"
+    );
+
+
+  task.dataset.status =
+    status;
+
+
+  /*
+    古い保存データにはmemoが無いため
+    必ず空文字へフォールバック。
+  */
+  task.dataset.memo =
+    typeof memo ===
+      "string"
+      ?
+      memo
+      :
+      "";
+
+
+  task.appendChild(
+    createElement(
+      "span",
+      "task-name",
+      name
+    )
+  );
+
+
+  renderTaskStatus(
+    task,
+    status
+  );
+
+
+  return task;
+}
 
   const task =
     createElement(
@@ -4234,15 +4254,19 @@ function createTextInput(
   placeholder
 ) {
 
+  /*
+    名前欄をtextareaへ変更。
+
+    既存コード側では
+    createTextInput()という名前を
+    そのまま使えるので、
+    呼び出し箇所を大量修正しなくて済む。
+  */
   const input =
     createElement(
-      "input",
+      "textarea",
       "dialog-input"
     );
-
-
-  input.type =
-    "text";
 
 
   input.placeholder =
@@ -4250,7 +4274,11 @@ function createTextInput(
 
 
   input.maxLength =
-    40;
+    160;
+
+
+  input.rows =
+    2;
 
 
   return input;
@@ -4428,7 +4456,15 @@ function saveProjectState() {
               status:
                 getTaskStatus(
                   task
-                )
+                ),
+
+              /*
+                v22
+              */
+              memo:
+                task.dataset.memo
+                ||
+                ""
             })
           )
       })
@@ -4439,70 +4475,6 @@ function saveProjectState() {
     STORAGE_KEY,
     JSON.stringify(
       state
-    )
-  );
-}
-
-
-function restoreProjectState() {
-
-  let state =
-    null;
-
-
-  const saved =
-    localStorage.getItem(
-      STORAGE_KEY
-    );
-
-
-  if (saved) {
-
-    try {
-
-      const parsed =
-        JSON.parse(
-          saved
-        );
-
-
-      if (
-        Array.isArray(
-          parsed
-        )
-        &&
-        parsed.length
-      ) {
-
-        state =
-          parsed;
-      }
-    }
-
-    catch (error) {
-
-      console.warn(
-        "保存データを読み込めませんでした。",
-        error
-      );
-    }
-  }
-
-
-  if (!state) {
-
-    state =
-      DEFAULT_PROJECT;
-  }
-
-
-  rebuildRoadmapFromMilestones(
-
-    state.map(
-      item =>
-        createMilestone(
-          item
-        )
     )
   );
 }
@@ -4767,3 +4739,888 @@ window.refreshProjectProgress =
 /* ========================================
    ▲ 共通便利関数 ここまで
 ======================================== */
+
+/* =========================================================
+   ▼ v22 プロジェクトタイトル
+========================================================= */
+
+function setupProjectTitleEditing() {
+
+  const title =
+    document.getElementById(
+      "project-title"
+    );
+
+
+  if (!title) {
+    return;
+  }
+
+
+  /*
+    保存済みタイトルを復元。
+  */
+  const saved =
+    localStorage.getItem(
+      PROJECT_TITLE_KEY
+    );
+
+
+  if (saved) {
+
+    title.textContent =
+      saved;
+  }
+
+
+  const open =
+    () => {
+
+      openProjectTitleDialog();
+
+    };
+
+
+  title.addEventListener(
+    "click",
+    open
+  );
+
+
+  title.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key ===
+          "Enter"
+        ||
+        event.key ===
+          " "
+      ) {
+
+        event.preventDefault();
+
+        open();
+      }
+    }
+  );
+}
+
+
+function openProjectTitleDialog() {
+
+  const title =
+    document.getElementById(
+      "project-title"
+    );
+
+
+  if (!title) {
+    return;
+  }
+
+
+  const input =
+    createTextInput(
+      "プロジェクト名"
+    );
+
+
+  input.value =
+    title.textContent
+      .trim();
+
+
+  const content =
+    createFormContent(
+      input,
+      "プロジェクト名を保存",
+      () => {
+
+        const name =
+          input.value
+            .trim();
+
+
+        if (!name) {
+
+          showInputError(
+            input,
+            "プロジェクト名を入力してくれ。"
+          );
+
+          return;
+        }
+
+
+        title.textContent =
+          name;
+
+
+        localStorage.setItem(
+          PROJECT_TITLE_KEY,
+          name
+        );
+
+
+        closeDialog();
+      }
+    );
+
+
+  openDialog({
+
+    label:
+      "PROJECT",
+
+    title:
+      "プロジェクト名を変更",
+
+    content,
+
+    focus:
+      input
+  });
+}
+
+
+/* =========================================================
+   ▲ v22 プロジェクトタイトル
+========================================================= */
+
+
+
+/* =========================================================
+   ▼ v22 タスクメモ
+========================================================= */
+
+function setupTaskMemoPanel() {
+
+  const panel =
+    document.getElementById(
+      "task-memo-panel"
+    );
+
+
+  const toggle =
+    document.getElementById(
+      "task-memo-toggle"
+    );
+
+
+  const input =
+    document.getElementById(
+      "task-memo-input"
+    );
+
+
+  if (
+    !panel ||
+    !toggle ||
+    !input
+  ) {
+    return;
+  }
+
+
+  /*
+    スマホ用開閉。
+  */
+  toggle.addEventListener(
+    "click",
+    () => {
+
+      if (
+        window.matchMedia(
+          "(min-width: 901px)"
+        ).matches
+      ) {
+        return;
+      }
+
+
+      const expanded =
+        panel.classList.toggle(
+          "is-expanded"
+        );
+
+
+      toggle.setAttribute(
+        "aria-expanded",
+        String(expanded)
+      );
+
+
+      if (
+        expanded &&
+        selectedTask
+      ) {
+
+        requestAnimationFrame(
+          () => {
+
+            input.focus();
+
+          }
+        );
+      }
+    }
+  );
+
+
+  /*
+    入力と同時にタスクへ保存。
+  */
+  input.addEventListener(
+    "input",
+    () => {
+
+      if (!selectedTask) {
+        return;
+      }
+
+
+      selectedTask.dataset.memo =
+        input.value;
+
+
+      saveProjectState();
+    }
+  );
+
+
+  refreshTaskMemoPanel();
+}
+
+
+function refreshTaskMemoPanel() {
+
+  const panel =
+    document.getElementById(
+      "task-memo-panel"
+    );
+
+
+  const name =
+    document.getElementById(
+      "task-memo-task-name"
+    );
+
+
+  const input =
+    document.getElementById(
+      "task-memo-input"
+    );
+
+
+  if (
+    !panel ||
+    !name ||
+    !input
+  ) {
+    return;
+  }
+
+
+  /*
+    DOMの再構築などで
+    選択中タスクが消えた場合。
+  */
+  if (
+    selectedTask &&
+    !selectedTask.isConnected
+  ) {
+
+    selectedTask =
+      null;
+  }
+
+
+  if (!selectedTask) {
+
+    panel.classList.remove(
+      "has-task"
+    );
+
+
+    name.textContent =
+      "タスクを選択";
+
+
+    input.value =
+      "";
+
+
+    input.disabled =
+      true;
+
+
+    return;
+  }
+
+
+  panel.classList.add(
+    "has-task"
+  );
+
+
+  name.textContent =
+    getTaskName(
+      selectedTask
+    );
+
+
+  input.disabled =
+    false;
+
+
+  /*
+    入力中のカーソル位置を
+    不必要に飛ばさない。
+  */
+  if (
+    document.activeElement !==
+    input
+  ) {
+
+    input.value =
+      selectedTask.dataset.memo
+      ||
+      "";
+  }
+}
+
+
+/* =========================================================
+   ▲ v22 タスクメモ
+========================================================= */
+
+
+
+/* =========================================================
+   ▼ v22 プロジェクトメニュー
+========================================================= */
+
+function setupProjectMenu() {
+
+  document
+    .getElementById(
+      "project-menu-button"
+    )
+    ?.addEventListener(
+      "click",
+      openProjectMenu
+    );
+}
+
+
+function openProjectMenu() {
+
+  const wrapper =
+    createElement(
+      "div",
+      "dialog-fields"
+    );
+
+
+  const overview =
+    createElement(
+      "button",
+      "dialog-secondary",
+      "全体一覧"
+    );
+
+
+  const backup =
+    createElement(
+      "button",
+      "dialog-secondary",
+      "バックアップを書き出す"
+    );
+
+
+  const rename =
+    createElement(
+      "button",
+      "dialog-secondary",
+      "プロジェクト名を変更"
+    );
+
+
+  const reset =
+    createElement(
+      "button",
+      "dialog-danger",
+      "初期状態に戻す"
+    );
+
+
+  [
+    overview,
+    backup,
+    rename,
+    reset
+  ].forEach(
+    button => {
+
+      button.type =
+        "button";
+
+    }
+  );
+
+
+  overview.addEventListener(
+    "click",
+    openProjectOverview
+  );
+
+
+  backup.addEventListener(
+    "click",
+    exportProjectBackup
+  );
+
+
+  rename.addEventListener(
+    "click",
+    () => {
+
+      closeDialog(
+        true
+      );
+
+      openProjectTitleDialog();
+    }
+  );
+
+
+  reset.addEventListener(
+    "click",
+    resetProject
+  );
+
+
+  wrapper.append(
+    overview,
+    backup,
+    rename,
+    reset
+  );
+
+
+  openDialog({
+
+    label:
+      "PROJECT",
+
+    title:
+      "プロジェクトメニュー",
+
+    content:
+      wrapper
+  });
+}
+
+
+/* =========================================================
+   ▼ 全体一覧
+========================================================= */
+
+function openProjectOverview() {
+
+  closeDialog(
+    true
+  );
+
+
+  const wrapper =
+    createElement(
+      "div",
+      "dialog-fields"
+    );
+
+
+  getMilestones().forEach(
+    milestone => {
+
+      const group =
+        createElement(
+          "div",
+          "task-edit-area"
+        );
+
+
+      const milestoneButton =
+        createElement(
+          "button",
+          "dialog-secondary",
+          milestone
+            .querySelector(
+              ".milestone-name"
+            )
+            ?.textContent
+            .trim()
+          ||
+          "マイルストーン"
+        );
+
+
+      milestoneButton.type =
+        "button";
+
+
+      milestoneButton.addEventListener(
+        "click",
+        () => {
+
+          closeDialog();
+
+
+          selectMilestone(
+            milestone,
+            true
+          );
+        }
+      );
+
+
+      group.appendChild(
+        milestoneButton
+      );
+
+
+      milestone
+        .querySelectorAll(
+          ".task"
+        )
+        .forEach(
+          task => {
+
+            const button =
+              createElement(
+                "button",
+                "dialog-secondary",
+                `・${getTaskName(task)}`
+              );
+
+
+            button.type =
+              "button";
+
+
+            button.addEventListener(
+              "click",
+              () => {
+
+                closeDialog();
+
+
+                selectMilestone(
+                  milestone,
+                  true
+                );
+
+
+                /*
+                  横中央移動後に
+                  タスクを縦中央へ。
+                */
+                setTimeout(
+                  () => {
+
+                    selectTask(
+                      task,
+                      true
+                    );
+
+                  },
+                  320
+                );
+              }
+            );
+
+
+            group.appendChild(
+              button
+            );
+          }
+        );
+
+
+      wrapper.appendChild(
+        group
+      );
+    }
+  );
+
+
+  openDialog({
+
+    label:
+      "OVERVIEW",
+
+    title:
+      "全体一覧",
+
+    content:
+      wrapper
+  });
+}
+
+
+/* =========================================================
+   ▼ バックアップ書き出し
+========================================================= */
+
+function exportProjectBackup() {
+
+  const data = {
+
+    version:
+      1,
+
+    projectTitle:
+      document
+        .getElementById(
+          "project-title"
+        )
+        ?.textContent
+        .trim()
+      ||
+      "Project Map",
+
+    milestones:
+      getMilestones().map(
+        milestone => ({
+
+          id:
+            milestone.dataset
+              .milestoneId,
+
+          name:
+            milestone
+              .querySelector(
+                ".milestone-name"
+              )
+              ?.textContent
+              .trim()
+            ||
+            "マイルストーン",
+
+          iconKey:
+            milestone.dataset
+              .iconKey
+            ||
+            "",
+
+          iconHtml:
+            milestone
+              .querySelector(
+                ".milestone-icon"
+              )
+              ?.innerHTML
+            ||
+            "🧭",
+
+          tasks:
+            [
+              ...milestone.querySelectorAll(
+                ".task"
+              )
+            ].map(
+              task => ({
+
+                name:
+                  getTaskName(
+                    task
+                  ),
+
+                status:
+                  getTaskStatus(
+                    task
+                  ),
+
+                memo:
+                  task.dataset.memo
+                  ||
+                  ""
+              })
+            )
+        })
+      )
+  };
+
+
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
+      ],
+      {
+        type:
+          "application/json"
+      }
+    );
+
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+
+  const link =
+    document.createElement(
+      "a"
+    );
+
+
+  const today =
+    new Date()
+      .toISOString()
+      .slice(
+        0,
+        10
+      );
+
+
+  link.href =
+    url;
+
+
+  link.download =
+    `project-map-backup-${today}.json`;
+
+
+  document.body.appendChild(
+    link
+  );
+
+
+  link.click();
+
+
+  link.remove();
+
+
+  URL.revokeObjectURL(
+    url
+  );
+
+
+  closeDialog();
+}
+
+
+/* =========================================================
+   ▼ 初期化
+========================================================= */
+
+function resetProject() {
+
+  if (
+    !window.confirm(
+      "プロジェクトのタスクとマイルストーンを初期状態に戻します。よろしいですか？"
+    )
+  ) {
+    return;
+  }
+
+
+  if (
+    !window.confirm(
+      "保存中のプロジェクト内容が消えます。本当に初期化しますか？"
+    )
+  ) {
+    return;
+  }
+
+
+  localStorage.removeItem(
+    STORAGE_KEY
+  );
+
+
+  localStorage.removeItem(
+    PROJECT_TITLE_KEY
+  );
+
+
+  selectedTask =
+    null;
+
+
+  selectedMilestone =
+    null;
+
+
+  const title =
+    document.getElementById(
+      "project-title"
+    );
+
+
+  if (title) {
+
+    title.textContent =
+      "サンプルプロジェクト";
+  }
+
+
+  rebuildRoadmapFromMilestones(
+
+    DEFAULT_PROJECT.map(
+      item =>
+        createMilestone(
+          item
+        )
+    )
+  );
+
+
+  normalizeTaskStatuses();
+
+
+  refreshProject({
+
+    animate:
+      false,
+
+    center:
+      false
+  });
+
+
+  const initial =
+    document.querySelector(
+      '.milestone[data-status="current"]'
+    )
+    ||
+    getMilestones()[0];
+
+
+  if (initial) {
+
+    selectMilestone(
+      initial,
+      true
+    );
+  }
+
+
+  saveProjectState();
+
+
+  closeDialog();
+}
+
+
+/* =========================================================
+   ▲ v22 プロジェクトメニュー
+========================================================= */
