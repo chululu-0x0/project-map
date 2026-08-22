@@ -557,24 +557,28 @@ function centerTask(
   ];
 
   const index =
-    tasks.indexOf(task);
+  tasks.indexOf(task);
 
-  /*
-    選択中タスクは、
-    親マイルストーン直下の
-    「1番目または2番目」に見える位置へ寄せる。
+/*
+  ▼ 1～2番目のタスクは位置固定 ここから
 
-    ・先頭タスク → 1番目
-    ・2番目以降 → ひとつ前のタスクを上に残し、
-      選択タスクを2番目にする
+  1番目・2番目のタスクは、
+  選択して膨らんでもスクロール位置は動かさない。
 
-    最後尾タスクでも同じ位置まで持ち上げられるよう、
-    CSS側でタスク列下部に余白を確保している。
-  */
-  const anchorTask =
-    index > 0
-      ? tasks[index - 1]
-      : task;
+  3番目以降を選択した時だけ、
+  選択タスクが親マイルストーン直下の
+  2番目あたりに来るよう上へフォーカスする。
+*/
+if (index <= 1) {
+  return;
+}
+
+const anchorTask =
+  tasks[index - 1];
+
+/*
+  ▲ 1～2番目のタスクは位置固定 ここまで
+*/
 
   const branchRect =
     branch.getBoundingClientRect();
