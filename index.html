@@ -1,84 +1,32 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-  >
-
-  <meta
-    name="theme-color"
-    content="#ffffff"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
   <title>Project Map</title>
-
-  <!--
-    今回の大きなレイアウト更新用。
-    キャッシュ対策で v=22 に更新。
-  -->
-  <link
-    rel="stylesheet"
-    href="style.css?v=22"
-  >
+  <link rel="stylesheet" href="style.css?v=23">
 </head>
 
-
 <body>
-
   <div class="app">
-
-
-    <!-- ========================================
-         ▼ ヘッダー
-    ======================================== -->
-
     <header class="app-header">
-
       <div class="header-title">
+        <p class="app-name">Project Map</p>
 
-        <p class="app-name">
-          Project Map
-        </p>
-
-        <!--
-          タップ・クリックでプロジェクト名編集。
-        -->
         <h1
           id="project-title"
           role="button"
           tabindex="0"
           aria-label="プロジェクト名を編集"
-        >
-          サンプルプロジェクト
-        </h1>
+          title="クリックしてプロジェクト名を編集"
+        >サンプルプロジェクト</h1>
 
-      </div>
-
-
-      <div class="header-actions">
-
-        <!-- ========================================
-             ▼ 全体進捗
-        ======================================== -->
-
-        <div class="header-progress">
-
-          <div class="header-progress-top">
-
-            <span>
-              全体進捗
-            </span>
-
-            <strong id="progress-percent">
-              0%
-            </strong>
-
+        <div class="title-progress" aria-label="全体進捗">
+          <div class="title-progress-meta">
+            <span>全体進捗</span>
+            <strong id="progress-percent">0%</strong>
           </div>
-
 
           <div
             class="progress-bar"
@@ -87,124 +35,66 @@
             aria-valuemax="100"
             aria-valuenow="0"
           >
-
             <div class="progress-bar-fill"></div>
-
           </div>
-
         </div>
-
-        <!-- ========================================
-             ▲ 全体進捗
-        ======================================== -->
-
-
-        <button
-          type="button"
-          class="project-menu-button"
-          id="project-menu-button"
-          aria-label="プロジェクトメニュー"
-        >
-          ⋯
-        </button>
-
       </div>
 
+      <button
+        type="button"
+        class="project-menu-button"
+        id="project-menu-button"
+        aria-label="プロジェクトメニュー"
+      >⋯</button>
     </header>
 
-    <!-- ========================================
-         ▲ ヘッダー
-    ======================================== -->
-
-
-
-    <!-- ========================================
-         ▼ メイン
-    ======================================== -->
-
     <main class="main-content">
-
-
-      <!-- ========================================
-           ▼ ロードマップ
-      ======================================== -->
-
       <section
         class="roadmap-section"
         aria-label="プロジェクトロードマップ"
       >
-
         <div class="roadmap-tools">
-
           <button
             type="button"
             class="add-milestone-button"
             id="add-milestone-button"
-          >
-            ＋ マイルストーン
-          </button>
-
+          >＋ マイルストーン</button>
         </div>
 
-
-        <div
-          class="roadmap"
-          id="roadmap"
-          aria-label="マイルストーン一覧"
-        ></div>
-
+        <div class="roadmap-frame">
+          <div
+            class="roadmap"
+            id="roadmap"
+            aria-label="マイルストーン一覧"
+          ></div>
+        </div>
       </section>
 
-      <!-- ========================================
-           ▲ ロードマップ
-      ======================================== -->
-
-
-
-      <!-- ========================================
-           ▼ 選択中タスクのメモ
-      ======================================== -->
-
       <aside
-        class="progress-panel task-memo-panel"
+        class="task-memo-panel"
         id="task-memo-panel"
         aria-label="選択中タスクのメモ"
       >
-
-        <div class="progress-card task-memo-card">
-
+        <div class="task-memo-card">
           <button
             type="button"
             class="task-memo-header"
             id="task-memo-toggle"
             aria-expanded="false"
           >
-
-            <span>
-
-              <span class="section-label">
-                TASK MEMO
-              </span>
-
+            <span class="task-memo-heading">
+              <span class="section-label">TASK MEMO</span>
               <strong
                 class="task-memo-task-name"
                 id="task-memo-task-name"
-              >
-                タスクを選択
-              </strong>
-
+              >タスクを選択</strong>
             </span>
-
 
             <span
               class="task-memo-chevron"
               aria-hidden="true"
-            >
-              ⌃
-            </span>
-
+            >⌃</span>
           </button>
-
 
           <textarea
             id="task-memo-input"
@@ -214,69 +104,34 @@
             disabled
           ></textarea>
 
-
           <p
             class="task-memo-empty"
             id="task-memo-empty"
-          >
-            タスクを選択すると、そのタスクのメモが表示されます。
-          </p>
-
+          >タスクを選択すると、そのタスクのメモが表示されます。</p>
         </div>
-
       </aside>
-
-      <!-- ========================================
-           ▲ 選択中タスクのメモ
-      ======================================== -->
-
-
     </main>
 
-    <!-- ========================================
-         ▲ メイン
-    ======================================== -->
-
-
-
-    <!-- ========================================
-         ▼ 状態凡例
-    ======================================== -->
-
     <footer class="status-legend">
-
       <div class="legend-item">
         <span class="legend-dot legend-complete"></span>
         完了
       </div>
-
       <div class="legend-item">
         <span class="legend-dot legend-current"></span>
         今やっている
       </div>
-
       <div class="legend-item">
         <span class="legend-dot legend-next"></span>
         次にやる
       </div>
-
       <div class="legend-item">
         <span class="legend-dot legend-future"></span>
         未着手
       </div>
-
     </footer>
-
-    <!-- ========================================
-         ▲ 状態凡例
-    ======================================== -->
-
-
   </div>
 
-
-  <script src="script.js?v=22"></script>
-
+  <script src="script.js?v=23"></script>
 </body>
-
 </html>
