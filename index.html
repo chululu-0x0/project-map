@@ -4,10 +4,6 @@
 <head>
   <meta charset="UTF-8">
 
-  <!-- ========================================
-       ▼ 画面・iPhone設定 ここから
-  ======================================== -->
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
@@ -20,27 +16,14 @@
 
   <title>Project Map</title>
 
-  <!-- ========================================
-       ▲ 画面・iPhone設定 ここまで
-  ======================================== -->
-
-
-  <!-- ========================================
-       ▼ CSS読み込み ここから
-
-       v=21
-       iPhoneに古いCSSが残るのを避けるための
-       キャッシュ対策。
-  ======================================== -->
-
+  <!--
+    今回の大きなレイアウト更新用。
+    キャッシュ対策で v=22 に更新。
+  -->
   <link
     rel="stylesheet"
-    href="style.css?v=21"
+    href="style.css?v=22"
   >
-
-  <!-- ========================================
-       ▲ CSS読み込み ここまで
-  ======================================== -->
 </head>
 
 
@@ -50,14 +33,7 @@
 
 
     <!-- ========================================
-         ▼ ヘッダー ここから
-
-         「ROADMAP」
-         「完成までの道のり」
-         は今回削除。
-
-         Project Map と
-         プロジェクトタイトルだけ残す。
+         ▼ ヘッダー
     ======================================== -->
 
     <header class="app-header">
@@ -68,38 +44,89 @@
           Project Map
         </p>
 
-        <h1 id="project-title">
+        <!--
+          タップ・クリックでプロジェクト名編集。
+        -->
+        <h1
+          id="project-title"
+          role="button"
+          tabindex="0"
+          aria-label="プロジェクト名を編集"
+        >
           サンプルプロジェクト
         </h1>
 
       </div>
 
 
-      <button
-        type="button"
-        class="project-menu-button"
-        id="project-menu-button"
-        aria-label="プロジェクトメニュー"
-      >
-        ⋯
-      </button>
+      <div class="header-actions">
+
+        <!-- ========================================
+             ▼ 全体進捗
+        ======================================== -->
+
+        <div class="header-progress">
+
+          <div class="header-progress-top">
+
+            <span>
+              全体進捗
+            </span>
+
+            <strong id="progress-percent">
+              0%
+            </strong>
+
+          </div>
+
+
+          <div
+            class="progress-bar"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+
+            <div class="progress-bar-fill"></div>
+
+          </div>
+
+        </div>
+
+        <!-- ========================================
+             ▲ 全体進捗
+        ======================================== -->
+
+
+        <button
+          type="button"
+          class="project-menu-button"
+          id="project-menu-button"
+          aria-label="プロジェクトメニュー"
+        >
+          ⋯
+        </button>
+
+      </div>
 
     </header>
 
     <!-- ========================================
-         ▲ ヘッダー ここまで
+         ▲ ヘッダー
     ======================================== -->
 
 
+
     <!-- ========================================
-         ▼ メイン画面 ここから
+         ▼ メイン
     ======================================== -->
 
     <main class="main-content">
 
 
       <!-- ========================================
-           ▼ ロードマップ ここから
+           ▼ ロードマップ
       ======================================== -->
 
       <section
@@ -107,10 +134,6 @@
         aria-label="プロジェクトロードマップ"
       >
 
-        <!--
-          マイルストーン追加ボタンだけ
-          ロードマップ上部へ残す。
-        -->
         <div class="roadmap-tools">
 
           <button
@@ -124,15 +147,6 @@
         </div>
 
 
-        <!--
-          中身は script.js が作る。
-
-          保存データあり
-          → 保存内容を復元
-
-          保存データなし
-          → 初期サンプルを表示
-        -->
         <div
           class="roadmap"
           id="roadmap"
@@ -142,127 +156,91 @@
       </section>
 
       <!-- ========================================
-           ▲ ロードマップ ここまで
+           ▲ ロードマップ
       ======================================== -->
+
 
 
       <!-- ========================================
-           ▼ 現在地・進捗 ここから
+           ▼ 選択中タスクのメモ
       ======================================== -->
 
       <aside
-        class="progress-panel"
-        aria-label="現在の進捗"
+        class="progress-panel task-memo-panel"
+        id="task-memo-panel"
+        aria-label="選択中タスクのメモ"
       >
 
-        <div class="progress-card">
+        <div class="progress-card task-memo-card">
 
-          <p class="section-label">
-            CURRENT
-          </p>
+          <button
+            type="button"
+            class="task-memo-header"
+            id="task-memo-toggle"
+            aria-expanded="false"
+          >
 
-          <h2>
-            現在地
-          </h2>
+            <span>
 
+              <span class="section-label">
+                TASK MEMO
+              </span>
 
-          <!-- 現在マイルストーン -->
-          <div class="current-milestone">
+              <strong
+                class="task-memo-task-name"
+                id="task-memo-task-name"
+              >
+                タスクを選択
+              </strong>
 
-            <span class="current-milestone-icon">
-              🧭
             </span>
 
-            <div>
 
-              <span class="small-label">
-                現在のマイルストーン
-              </span>
-
-              <strong>
-                -
-              </strong>
-
-            </div>
-
-          </div>
-
-
-          <!-- 全体進捗 -->
-          <div class="progress-area">
-
-            <div class="progress-title">
-
-              <span>
-                全体進捗
-              </span>
-
-              <strong id="progress-percent">
-                0%
-              </strong>
-
-            </div>
-
-
-            <div
-              class="progress-bar"
-              role="progressbar"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-valuenow="0"
+            <span
+              class="task-memo-chevron"
+              aria-hidden="true"
             >
-
-              <div class="progress-bar-fill"></div>
-
-            </div>
-
-          </div>
-
-
-          <!-- 今 -->
-          <div class="current-task-box">
-
-            <span class="small-label">
-              今やっていること
+              ⌃
             </span>
 
-            <strong>
-              現在のタスクはありません
-            </strong>
-
-          </div>
+          </button>
 
 
-          <!-- 次 -->
-          <div class="next-task-box">
+          <textarea
+            id="task-memo-input"
+            class="task-memo-input"
+            placeholder="タスク名に書ききれないことをここにメモできます。"
+            rows="8"
+            disabled
+          ></textarea>
 
-            <span class="small-label">
-              次にやること
-            </span>
 
-            <strong>
-              次のタスクはありません
-            </strong>
-
-          </div>
+          <p
+            class="task-memo-empty"
+            id="task-memo-empty"
+          >
+            タスクを選択すると、そのタスクのメモが表示されます。
+          </p>
 
         </div>
 
       </aside>
 
       <!-- ========================================
-           ▲ 現在地・進捗 ここまで
+           ▲ 選択中タスクのメモ
       ======================================== -->
+
 
     </main>
 
     <!-- ========================================
-         ▲ メイン画面 ここまで
+         ▲ メイン
     ======================================== -->
 
 
+
     <!-- ========================================
-         ▼ 状態凡例 ここから
+         ▼ 状態凡例
     ======================================== -->
 
     <footer class="status-legend">
@@ -290,21 +268,14 @@
     </footer>
 
     <!-- ========================================
-         ▲ 状態凡例 ここまで
+         ▲ 状態凡例
     ======================================== -->
+
 
   </div>
 
 
-  <!-- ========================================
-       ▼ JavaScript読み込み ここから
-  ======================================== -->
-
-  <script src="script.js?v=21"></script>
-
-  <!-- ========================================
-       ▲ JavaScript読み込み ここまで
-  ======================================== -->
+  <script src="script.js?v=22"></script>
 
 </body>
 
