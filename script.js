@@ -1714,9 +1714,7 @@ function openTaskEditDialog(task) {
 
   [
     ["complete", "✓", "完了"],
-    ["current", "●", "今やってる"],
-    ["next", "○", "次にやる"],
-    ["future", "○", "未着手"]
+    ["future", "○", "未完了"]
   ].forEach(
     ([status, icon, label]) => {
       const button =
@@ -5975,4 +5973,76 @@ window.refreshProjectProgress =
 
 /* =========================================================
    ▲ 共通補助関数 ここまで
+========================================================= */
+
+/* =========================================================
+   ▼ Ver.2.0 完了／未完了型ロードマップ ここから
+========================================================= */
+
+function canEditMilestone(milestone) {
+  return Boolean(milestone && selectedMilestone === milestone);
+}
+
+function centerMilestone(milestone, smooth = true) {
+  if (!milestone) return;
+  milestone.scrollIntoView({
+    behavior: smooth ? "smooth" : "auto",
+    block: "nearest"
+  });
+}
+
+function refreshMilestoneStatuses() {
+  document.querySelectorAll(".current-label").forEach(label => label.remove());
+
+  getMilestones().forEach(milestone => {
+    const tasks = [...milestone.querySelectorAll(".task")];
+    const completed = tasks.filter(task => getTaskStatus(task) === "complete").length;
+    const allComplete = tasks.length > 0 && completed === tasks.length;
+
+    milestone.dataset.status = allComplete ? "complete" : "future";
+    milestone.classList.remove("milestone-complete", "milestone-current", "milestone-future");
+    milestone.classList.add(allComplete ? "milestone-complete" : "milestone-future");
+
+    const statusText = milestone.querySelector(".milestone-status");
+    if (statusText) {
+      statusText.textContent = tasks.length
+        ? `${completed}/${tasks.length}`
+        : "0/0";
+    }
+  });
+}
+
+function renderTaskStatus(task, status) {
+  const name = getTaskName(task);
+  const normalized = status === "complete" ? "complete" : "future";
+
+  task.dataset.status = normalized;
+  task.classList.remove("task-complete", "task-current", "task-next");
+  task.replaceChildren();
+
+  if (normalized === "complete") {
+    task.classList.add("task-complete");
+    task.append(
+      createElement("span", "task-check", "✓"),
+      createElement("span", "task-name", name)
+    );
+    return;
+  }
+
+  task.append(
+    createElement("span", "task-marker", "○"),
+    createElement("span", "task-name", name)
+  );
+}
+
+function changeTaskStatus(task, status) {
+  renderTaskStatus(task, status === "complete" ? "complete" : "future");
+  refreshProject({ animate: true, center: false });
+  selectMilestone(task.closest(".milestone"), false, false);
+  selectTask(task, false);
+  saveProjectState();
+}
+
+/* =========================================================
+   ▲ Ver.2.0 完了／未完了型ロードマップ ここまで
 ========================================================= */
